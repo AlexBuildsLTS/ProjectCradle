@@ -48,4 +48,4 @@ yarn-error.*
 .vscode/
 *.log   
 *.supabase/.temp/
-*.supabase/functions/.env
+*.supabase/functions/.env.env
