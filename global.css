@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Nurturing Palette */
+    --color-sky: #BAE6FD;    /* Very light blue */
+    --color-mint: #6EE7B7;   /* Success/Healthy */
+    --color-rose: #F9A8D4;   /* Alert/Needs attention */
+    --color-slate: #475569;  /* Soft gray for text - no harsh blacks */
+  }
+
+  body {
+    background-color: #F0F9FF;
+  }
+}
+
+@layer components {
+  /* Ultra-sleek Frosted Glass */
+  .glass-tile {
+    @apply bg-white/40 border border-white/60 rounded-[40px];
+    backdrop-filter: blur(10px); /* Works on Web; simulated on Native */
+  }
+
+  .text-nurture {
+    @apply text-slate-600 font-semibold tracking-tight;
+  }
+}
