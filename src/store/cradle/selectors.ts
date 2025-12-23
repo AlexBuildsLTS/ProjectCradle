@@ -51,5 +51,44 @@ export const cradleSelectors = {
     if (pressure < 0.9) return 'BUILDING';  // Soft Gold
     if (pressure <= 1.0) return 'SWEETSPOT'; // Emerald
     return 'OVERTIRED';                     // Rose/Pink
+  },
+
+  /**
+   * Groups events by type
+   */
+  getGroupedEvents: (events: CareEvent[]) => {
+    return {
+      sleepEvents: events.filter((e) => e.type === 'SLEEP'),
+      feedEvents: events.filter((e) => e.type === 'FEED'),
+      diaperEvents: events.filter((e) => e.type === 'DIAPER'),
+      solidEvents: events.filter((e) => e.type === 'SOLID'),
+    };
+  },
+
+  /**
+   * Gets the last diaper event
+   */
+  getLastDiaperEvent: (events: CareEvent[]) => {
+    return events
+      .filter((e) => e.type === 'DIAPER')
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+  },
+
+  /**
+   * Gets the last feed event
+   */
+  getLastFeedEvent: (events: CareEvent[]) => {
+    return events
+      .filter((e) => e.type === 'FEED')
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+  },
+
+  /**
+   * Gets the last solid event
+   */
+  getLastSolidEvent: (events: CareEvent[]) => {
+    return events
+      .filter((e) => e.type === 'SOLID')
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
   }
 };

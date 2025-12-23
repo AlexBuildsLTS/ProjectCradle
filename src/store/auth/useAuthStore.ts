@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (error) throw error;
 
-      set({ profile, role: profile?.role, isLoading: false });
+      set({ profile, role: (profile as any)?.role, isLoading: false });
     } catch (err) {
       console.error("[Cradle Auth] Profile Fetch Failure:", err);
       set({ profile: null, role: null, isLoading: false });

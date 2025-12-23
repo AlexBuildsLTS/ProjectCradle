@@ -27,10 +27,12 @@ export interface CareEvent {
 }
 
 interface CradleState {
-  toggleSleep: any;
-  activeSleepId: any;
   events: CareEvent[];
+  activeSleepId: string | null;
   // Actions
+  toggleSleep: () => void;
+  addEvent: (type: string) => void;
+  addDiaperEvent: () => void;
   logEvent: (type: EventType, metadata: CareEvent['metadata']) => void;
   deleteEvent: (id: string) => void;
   syncComplete: (id: string) => void;
@@ -40,8 +42,58 @@ interface CradleState {
 
 export const useCradleStore = create<CradleState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       events: [],
+      activeSleepId: null,
+
+      toggleSleep: () => {
+        set((state) => {
+          if (state.activeSleepId) {
+            // End sleep - could update the event with duration, but for now just clear
+            return { activeSleepId: null };
+          } else {
+            // Start sleep
+            const newId = Crypto.randomUUID();
+            const sleepEvent: CareEvent = {
+              id: newId,
+              timestamp: Date.now(),
+              type: 'SLEEP',
+              metadata: {},
+              isSynced: false,
+            };
+            return {
+              activeSleepId: newId,
+              events: [sleepEvent, ...state.events],
+            };
+          }
+        });
+      },
+
+      addEvent: (type) => {
+        const newEvent: CareEvent = {
+          id: Crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: type as EventType,
+          metadata: {},
+          isSynced: false,
+        };
+        set((state) => ({
+          events: [newEvent, ...state.events],
+        }));
+      },
+
+      addDiaperEvent: () => {
+        const newEvent: CareEvent = {
+          id: Crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'DIAPER',
+          metadata: {},
+          isSynced: false,
+        };
+        set((state) => ({
+          events: [newEvent, ...state.events],
+        }));
+      },
 
       /**
        * logEvent: Idempotent transaction entry.

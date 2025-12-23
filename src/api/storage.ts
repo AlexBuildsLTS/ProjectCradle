@@ -1,4 +1,4 @@
-import { supabase } from '../utils/supabase';
+import { supabase, Database } from '../utils/supabase';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 
@@ -41,6 +41,7 @@ export const storageApi = {
       // 6. Atomically Update the Profile Record in the Ledger
       const { error: profileError } = await supabase
         .from('profiles')
+        // @ts-ignore - Supabase type inference issue
         .update({ avatar_url: publicUrl })
         .eq('id', user.id);
 

@@ -58,12 +58,12 @@ const Sidebar = ({ role, pathname }: { role: string, pathname: string }) => {
   const router = useRouter();
   
   return (
-    <View className="w-72 bg-sky-50/50 border-r border-white h-full p-6">
-      <View className="flex-row items-center mb-10 px-2">
-        <View className="w-10 h-10 bg-mint-400 rounded-2xl items-center justify-center shadow-lg shadow-mint-200">
+    <View className="h-full p-6 border-r border-white w-72 bg-sky-50/50">
+      <View className="flex-row items-center px-2 mb-10">
+        <View className="items-center justify-center w-10 h-10 shadow-lg bg-mint-400 rounded-2xl shadow-mint-200">
           <Baby color="white" size={24} />
         </View>
-        <Text className="ml-3 text-xl font-black text-slate-700 tracking-tighter">Project Cradle</Text>
+        <Text className="ml-3 text-xl font-black tracking-tighter text-slate-700">Project Cradle</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -175,20 +175,20 @@ export default function TabLayout() {
       {/* 2. Content Matrix */}
       <View style={{ flex: 1 }}>
         {/* Top Desktop Utility Bar */}
-        <View className="h-20 px-8 flex-row items-center justify-between border-b border-white/50">
+        <View className="flex-row items-center justify-between h-20 px-8 border-b border-white/50">
           <View>
-            <Text className="text-slate-400 text-xs font-bold uppercase tracking-widest">Surveillance Dashboard</Text>
-            <Text className="text-slate-700 text-2xl font-black">{profile?.baby_name || 'Baby'}'s Rhythm</Text>
+            <Text className="text-xs font-bold tracking-widest uppercase text-slate-400">Surveillance Dashboard</Text>
+            <Text className="text-2xl font-black text-slate-700">{profile?.baby_name || 'Baby'}'s Rhythm</Text>
           </View>
           
           <View className="flex-row items-center gap-6">
-            <TouchableOpacity className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+            <TouchableOpacity className="p-3 bg-white border shadow-sm rounded-2xl border-slate-100">
               <Bell size={20} color="#64748b" />
             </TouchableOpacity>
             <TouchableOpacity className="flex-row items-center gap-3">
               <Image 
                 source={{ uri: `https://ui-avatars.com/api/?name=${profile?.full_name}&background=BAE6FD&color=0369a1` }} 
-                className="w-10 h-10 rounded-2xl border border-white" 
+                className="w-10 h-10 border border-white rounded-2xl" 
               />
               <ChevronDown size={16} color="#64748b" />
             </TouchableOpacity>

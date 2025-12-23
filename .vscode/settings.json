@@ -11,5 +11,6 @@
     "NativeWind",
     "Lucide",
     "Idempotent"
-  ]
+  ],
+  "deno.enable": false
 }

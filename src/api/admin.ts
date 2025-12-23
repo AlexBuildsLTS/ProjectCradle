@@ -8,6 +8,7 @@ export const adminApi = {
   /**
    * Unified System Overview & Statistics
    * Resolves Error 2339 by providing the expected 'getAdminStats' method.
+   * Uses admin client to bypass RLS for system-wide statistics.
    */
   async getAdminStats() {
     // 1. Fetch Total Users
@@ -33,7 +34,7 @@ export const adminApi = {
       activeNaps: activeNaps || 0,
       activeTickets: tickets || 0,
       status: 'OPERATIONAL',
-      latency: Math.floor(Math.random() * 80) + 20 
+      latency: Math.floor(Math.random() * 80) + 20,
     };
-  }
+  },
 };

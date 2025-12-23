@@ -4,26 +4,95 @@
 
 @layer base {
   :root {
-    /* Nurturing Palette */
-    --color-sky: #BAE6FD;    /* Very light blue */
-    --color-mint: #6EE7B7;   /* Success/Healthy */
-    --color-rose: #F9A8D4;   /* Alert/Needs attention */
-    --color-slate: #475569;  /* Soft gray for text - no harsh blacks */
-  }
-
-  body {
-    background-color: #F0F9FF;
+    --color-bg: #0f172a;
+    --color-teal: #14B8A6;
+    --color-purple: #8B5CF6;
   }
 }
 
 @layer components {
-  /* Ultra-sleek Frosted Glass */
+  /* ========================================
+     GLASSMORPHISM DESIGN SYSTEM
+     Modern teal/purple aesthetic with blur
+     ======================================== */
+  
+  /* Base Glass Tile - Teal Variant */
   .glass-tile {
-    @apply bg-white/40 border border-white/60 rounded-[40px];
-    backdrop-filter: blur(10px); /* Works on Web; simulated on Native */
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-teal-400/20 to-teal-500/10 border-white/30;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
-  .text-nurture {
-    @apply text-slate-600 font-semibold tracking-tight;
+  /* Purple Glass Variant */
+  .glass-tile-purple {
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-purple-400/20 to-purple-500/10 border-white/30;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Teal Glass Variant */
+  .glass-tile-teal {
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-teal-400/25 to-cyan-400/15 border-teal-200/40;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Success/Green Glass Variant */
+  .glass-tile-green {
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-green-400/20 to-emerald-500/10 border-white/30;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Warning Glass Variant */
+  .glass-tile-warning {
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-yellow-400/20 to-amber-500/10 border-white/30;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Danger Glass Variant */
+  .glass-tile-danger {
+    @apply border shadow-lg rounded-3xl bg-gradient-to-br from-red-400/20 to-rose-500/10 border-white/30;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* ========================================
+     MODERN BUTTON STYLES
+     Glassmorphic buttons with gradients
+     ======================================== */
+  
+  .btn-primary {
+    @apply px-6 py-3 font-bold text-white transition-all duration-300 shadow-lg rounded-2xl active:scale-95;
+    background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 font-bold text-white transition-all duration-300 shadow-lg rounded-2xl active:scale-95;
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+  }
+
+  .btn-success {
+    @apply px-6 py-3 font-bold text-white transition-all duration-300 shadow-lg rounded-2xl active:scale-95;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  }
+
+  .btn-warning {
+    @apply px-6 py-3 font-bold text-white transition-all duration-300 shadow-lg rounded-2xl active:scale-95;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 font-bold text-white transition-all duration-300 shadow-lg rounded-2xl active:scale-95;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  }
+
+  /* Glass Button Style */
+  .btn-glass {
+    @apply px-6 py-3 font-bold transition-all duration-300 border shadow-lg rounded-2xl border-white/40 active:scale-95;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 }

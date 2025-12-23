@@ -15,6 +15,7 @@ interface StatCardProps {
   isLocked?: boolean;
   className?: string;
   children?: React.ReactNode;
+  variant?: 'teal' | 'purple' | 'green' | 'warning' | 'danger';
 }
 
 export const StatCard = ({
@@ -24,15 +25,24 @@ export const StatCard = ({
   isLocked,
   className,
   children,
+  variant = 'teal'
 }: StatCardProps) => {
+  const variantStyles = {
+    teal: 'glass-tile',
+    purple: 'glass-tile-purple',
+    green: 'glass-tile-green',
+    warning: 'glass-tile-warning',
+    danger: 'glass-tile-danger',
+  };
+
   return (
-    <View className={`bg-white/40 border border-white/70 rounded-[45px] p-8 mb-6 shadow-sm overflow-hidden relative ${className || ''}`}>
+    <View className={`${variantStyles[variant]} p-8 mb-6 shadow-sm overflow-hidden relative rounded-[45px] ${className || ''}`}>
       <Text className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-1">
         {title}
       </Text>
-      <Text className="text-slate-700 text-3xl font-black mb-1">{value}</Text>
+      <Text className="mb-1 text-3xl font-black text-slate-700">{value}</Text>
       {subtitle && (
-        <Text className="text-slate-500 font-bold text-xs">{subtitle}</Text>
+        <Text className="text-xs font-bold text-slate-500">{subtitle}</Text>
       )}
 
       <View className="mt-6">{children}</View>
@@ -44,10 +54,10 @@ export const StatCard = ({
           tint="light"
           className="absolute inset-0 items-center justify-center"
         >
-          <View className="bg-mint-400 p-3 rounded-full mb-2 shadow-lg shadow-mint-200">
+          <View className="p-3 mb-2 bg-purple-500 rounded-full shadow-lg shadow-purple-200">
             <Crown size={20} color="white" />
           </View>
-          <Text className="text-slate-700 font-black text-sm">
+          <Text className="text-sm font-black text-slate-700">
             Premium Insight
           </Text>
           <Text className="text-slate-400 font-bold text-[10px] uppercase">
