@@ -1,4 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
+import { NativeAppEventEmitter } from 'react-native';
 
 export interface User {
   id: string;

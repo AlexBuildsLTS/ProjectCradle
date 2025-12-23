@@ -3,10 +3,12 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "npx expo start",
+    "android": "npx expo run:android",
+    "ios": "npx expo run:ios",
+    "web": "npx expo start --web",
+    "build": "npx expo export -p web",
+    "test:keploy": "jest --coverage --coverageReporters=text --coverageReporters=cobertura --collectCoverageFrom='./**/*.{js,jsx,ts,tsx}'"
   },
   "dependencies": {
     "@expo/env": "^2.0.8",
