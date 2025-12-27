@@ -4,7 +4,7 @@ import * as Clipboard from "expo-clipboard"; // Ensure this matches exactly
 import { Copy, Share2, UserPlus } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Share, Text, TouchableOpacity, View } from "react-native";
-import { triggerLightImpact } from "../../app/(app)/(mobile)/MobileHaptics";
+
 
 /**
  * PROJECT CRADLE: CAREGIVER INVITE SYSTEM
@@ -70,3 +70,7 @@ export const InviteCaregiver = () => {
     </GlassCard>
   );
 };
+function triggerLightImpact() {
+  throw new Error("Function not implemented.");
+}
+
