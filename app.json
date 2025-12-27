@@ -14,15 +14,26 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.projectcradle",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow ProjectCradle to access your photos to save baby milestones.",
+        "NSCameraUsageDescription": "Allow ProjectCradle to use the camera to capture memories."
+      }
     },
     "android": {
+      "package": "com.yourname.projectcradle",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -32,7 +43,14 @@
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ProjectCradle to access your photos to save baby milestones.",
+          "cameraPermission": "Allow ProjectCradle to use the camera to capture memories."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
