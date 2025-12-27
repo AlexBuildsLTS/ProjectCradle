@@ -4,13 +4,30 @@
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
   },
-  "cSpell.words": [
-    "Bento",
-    "Zustand",
-    "Reanimated",
-    "NativeWind",
-    "Lucide",
-    "Idempotent"
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "tailwindCSS.experimental.classRegex": [
+    ["nativewind", "className:\\s*['\"`]([^'\"`]*)['\"`]"],
+    ["tw`([^`]*)", "tw`([^`]*)"]
   ],
-  "deno.enable": false
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "deno.enable": false,
+  "deno.lint": false,
+  "deno.unstable": true,
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "cSpell.words": [
+    "supabase",
+    "Glassmorphism",
+    "NativeWind",
+    "lucide",
+    "Zustand",
+    "apikey",
+    "biometrics",
+    "Expo"
+  ]
 }

@@ -1,9 +1,18 @@
 module.exports = {
-  extends: ["expo", "prettier"],
-  plugins: ["prettier"],
+  root: true,
+  extends: [
+    "expo",
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+  ],
+  plugins: ["@typescript-eslint", "react-hooks"],
   rules: {
-    "prettier/prettier": "error",
-    "no-unused-vars": "warn",
+    "prettier/prettier": 0,
+    "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["error"],
   },
 };

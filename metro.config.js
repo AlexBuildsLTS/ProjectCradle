@@ -1,22 +1,22 @@
-const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
-const path = require('path');
+const { getDefaultConfig } = require("expo/metro-config");
+const { withNativeWind } = require("nativewind/metro");
+const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
+// SVG Transformer Logic
 config.transformer.babelTransformerPath = require.resolve(
-  'react-native-svg-transformer'
+  "react-native-svg-transformer"
 );
 config.resolver.assetExts = config.resolver.assetExts.filter(
-  (ext) => ext !== 'svg'
+  (ext) => ext !== "svg"
 );
-config.resolver.sourceExts.push('svg');
+config.resolver.sourceExts.push("svg");
 
+// Path Aliasing
 config.resolver.alias = {
-  '@': path.resolve(__dirname, 'src'),
+  "@": path.resolve(__dirname, "./"),
 };
 
-module.exports = withNativeWind(config, {
-  input: './global.css',
-  configPath: './tailwind.config.js',
-});
+// Ensure this matches your global CSS location
+module.exports = withNativeWind(config, { input: "./global.css" });
