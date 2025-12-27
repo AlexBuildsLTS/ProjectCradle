@@ -1,67 +1,81 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
-import { Baby, Calendar, Weight as WeightIcon, ArrowRight } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { supabase } from '../../src/utils/supabase';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Heart, Calendar, ArrowRight, Sparkles } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function OnboardingScreen() {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ babyName: '', dob: '', weight: '' });
+  const [babyName, setBabyName] = useState('');
+  const [dob, setDob] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
   const router = useRouter();
 
   const handleComplete = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('profiles').update({
-      baby_name: formData.babyName,
-      baby_dob: formData.dob,
-      is_onboarded: true
-    }).eq('id', user?.id);
-    router.replace('/(tabs)/');
+    if (user) {
+      const { error } = await supabase.from('profiles').update({
+        baby_name: babyName,
+        baby_dob: dob.toISOString().split('T')[0],
+      }).eq('id', user.id);
+      if (!error) router.replace('/(app)');
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F0F9FF] p-8 justify-center">
-      <View className="items-center mb-12">
-        <View className="w-20 h-20 bg-white rounded-[30px] items-center justify-center shadow-xl border border-white">
-          <Baby size={40} color="#10B981" />
+    <View className="justify-center flex-1 px-8 bg-neutral-950">
+      <Animated.View entering={FadeIn.delay(200)}>
+        <View className="items-center justify-center w-16 h-16 mb-8 bg-secondary/20 rounded-3xl">
+          <Heart size={32} color="#B794F6" fill="#B794F6" />
         </View>
-        <Text className="text-3xl font-black text-slate-800 mt-6 text-center">Tell us about{'\n'}your little one</Text>
-      </View>
 
-      <BlurView intensity={60} tint="light" className="p-10 rounded-[50px] border border-white bg-white/40">
-        {step === 1 ? (
-          <AnimatedStep>
-            <Text className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">Baby's Name</Text>
-            <TextInput 
-              className="bg-white border border-slate-100 rounded-2xl px-5 h-14 text-slate-700 font-bold mb-8"
-              placeholder="Emma"
-              value={formData.babyName}
-              onChangeText={(t) => setFormData({...formData, babyName: t})}
-            />
-            <TouchableOpacity onPress={() => setStep(2)} className="bg-mint-400 h-16 rounded-full items-center justify-center flex-row shadow-xl">
-              <Text className="text-white font-black text-lg mr-2">Next Step</Text>
-              <ArrowRight size={20} color="white" strokeWidth={3} />
+        <Text className="mb-3 text-4xl font-black tracking-tighter text-white">Baby's Identity</Text>
+        <Text className="mb-12 text-lg font-medium text-neutral-500">Initialize Berry AI with your little one's details.</Text>
+
+        <View className="space-y-6">
+          <View>
+            <Text className="text-neutral-400 font-black text-[10px] uppercase tracking-[2px] mb-3 ml-1">Full Name</Text>
+            <View className="justify-center h-16 px-5 border bg-white/5 border-white/10 rounded-2xl">
+              <TextInput 
+                placeholder="e.g. Charlie"
+                placeholderTextColor="#475569"
+                className="text-xl font-bold text-white"
+                value={babyName}
+                onChangeText={setBabyName}
+              />
+            </View>
+          </View>
+
+          <View>
+            <Text className="text-neutral-400 font-black text-[10px] uppercase tracking-[2px] mb-3 ml-1">Arrival Date</Text>
+            <TouchableOpacity 
+              onPress={() => setShowPicker(true)}
+              className="flex-row items-center justify-between h-16 px-5 border bg-white/5 border-white/10 rounded-2xl"
+            >
+              <Text className="text-xl font-bold text-white">{dob.toLocaleDateString()}</Text>
+              <Calendar size={20} color="#B794F6" />
             </TouchableOpacity>
-          </AnimatedStep>
-        ) : (
-          <AnimatedStep>
-            <Text className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">Birth Date</Text>
-            <TextInput 
-              className="bg-white border border-slate-100 rounded-2xl px-5 h-14 text-slate-700 font-bold mb-8"
-              placeholder="YYYY-MM-DD"
-              value={formData.dob}
-              onChangeText={(t) => setFormData({...formData, dob: t})}
-            />
-            <TouchableOpacity onPress={handleComplete} className="bg-mint-400 h-16 rounded-full items-center justify-center flex-row shadow-xl">
-              <Text className="text-white font-black text-lg mr-2">Initialize System</Text>
-              <ArrowRight size={20} color="white" strokeWidth={3} />
-            </TouchableOpacity>
-          </AnimatedStep>
-        )}
-      </BlurView>
-    </SafeAreaView>
+          </View>
+        </View>
+
+        <TouchableOpacity 
+          onPress={handleComplete}
+          className="flex-row items-center justify-center h-16 mt-12 shadow-2xl bg-secondary rounded-2xl shadow-secondary/20"
+        >
+          <Sparkles size={20} color="#020617" className="mr-3" />
+          <Text className="text-lg font-black tracking-widest uppercase text-neutral-950">Activate AI Insights</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {showPicker && (
+        <DateTimePicker
+          value={dob}
+          mode="date"
+          display="spinner"
+          onChange={(e, d) => { setShowPicker(false); if(d) setDob(d); }}
+        />
+      )}
+    </View>
   );
 }
-
-const AnimatedStep = ({ children }: any) => <View>{children}</View>; // Placeholder for Fade animation
