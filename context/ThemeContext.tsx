@@ -1,7 +1,7 @@
-import { Theme } from "@/app/(app)/shared/Theme";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Theme } from '@/app/(app)/shared/Theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 
 /**
  * PROJECT CRADLE: CIRCADIAN THEME ENGINE
@@ -17,7 +17,7 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleNightMode: () => {},
 });
 
-const STORAGE_KEY = "PROJECT_CRADLE_NIGHT_MODE";
+const STORAGE_KEY = 'PROJECT_CRADLE_NIGHT_MODE';
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isNightMode, setIsNightMode] = useState(false);
@@ -29,7 +29,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved !== null) setIsNightMode(JSON.parse(saved));
       } catch (e) {
-        console.error("Failed to load theme preference", e);
+        console.error('Failed to load theme preference', e);
       }
     };
     loadPreference();
@@ -41,7 +41,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextValue));
     } catch (e) {
-      console.error("Failed to save theme preference", e);
+      console.error('Failed to save theme preference', e);
     }
   };
 
@@ -50,7 +50,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       <View
         style={{
           flex: 1,
-          backgroundColor: isNightMode ? "#0a0000" : Theme.colors.background,
+          backgroundColor: isNightMode ? '#0a0000' : Theme.colors.background,
         }}
       >
         {children}
@@ -62,11 +62,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             style={[
               StyleSheet.absoluteFillObject,
               {
-                backgroundColor: "rgba(255, 0, 0, 0.06)",
+                backgroundColor: 'rgba(255, 0, 0, 0.06)',
                 zIndex: 99999,
                 // Web specific optimization for backdrop filter if needed
-                ...(Platform.OS === "web" &&
-                  ({ mixBlendMode: "multiply" } as any)),
+                ...(Platform.OS === 'web' &&
+                  ({ mixBlendMode: 'multiply' } as any)),
               },
             ]}
           />

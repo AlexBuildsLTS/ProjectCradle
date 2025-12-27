@@ -1,23 +1,61 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+
+/**
+ * PROJECT CRADLE: HIGH-FIDELITY GLASS BADGE
+ * Purpose: Used for User Names (Johan), Baby Status, and AI Indicators.
+ */
 
 interface BadgeProps {
   label: string;
-  variant?: 'teal' | 'lavender' | 'orange';
+  variant?: 'primary' | 'secondary' | 'outline';
+  style?: ViewStyle;
+  textStyle?: TextStyle;
 }
 
-export const Badge = ({ label, variant = 'teal' }: BadgeProps) => {
-  const colors = {
-    teal: 'bg-primary/10 text-primary border-primary/20',
-    lavender: 'bg-secondary/10 text-secondary border-secondary/20',
-    orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-  };
-
+export const Badge = ({ label, variant = 'primary', style, textStyle }: BadgeProps) => {
+  const isSecondary = variant === 'secondary';
+  
   return (
-    <View className={`px-3 py-1 rounded-full border ${colors[variant].split(' ').slice(0, 1).join('')} ${colors[variant].split(' ').slice(2).join('')}`}>
-      <Text className={`text-[10px] font-black uppercase tracking-tighter ${colors[variant].split(' ').slice(1, 2).join('')}`}>
-        {label}
+    <View style={[
+      styles.badgeContainer, 
+      isSecondary && styles.secondaryVariant,
+      style
+    ]}>
+      <Text style={[
+        styles.badgeText, 
+        isSecondary && styles.secondaryText,
+        textStyle
+      ]}>
+        {label.toUpperCase()}
       </Text>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  badgeContainer: {
+    backgroundColor: 'rgba(79, 209, 199, 0.1)', // Soft Teal Translucency
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.2)',
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  secondaryVariant: {
+    backgroundColor: 'rgba(183, 148, 246, 0.1)', // Soft Lavender Translucency
+    borderColor: 'rgba(183, 148, 246, 0.2)',
+  },
+  badgeText: {
+    color: '#4FD1C7', // Primary Teal
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  secondaryText: {
+    color: '#B794F6', // Secondary Lavender
+  },
+});
