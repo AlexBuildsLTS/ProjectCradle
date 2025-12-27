@@ -1,54 +1,55 @@
-import { serve } from "std/http/server.ts"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-serve(async (req: Request) => {
+Deno.serve(async (req) => {
+  // 1. Handshake: Solve the OPTIONS preflight issue
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error("Missing Authorization header")
+    const rawKey = Deno.env.get('ENCRYPTION_KEY')
+    if (!rawKey) throw new Error('VAULT_FAILURE: ENCRYPTION_KEY_NOT_FOUND')
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+    const encoder = new TextEncoder()
+    const keyData = encoder.encode(rawKey.padEnd(32, '0').slice(0, 32))
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "AES-CBC" },
+      false,
+      ["decrypt"]
     )
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    if (authError || !user) throw new Error("Unauthorized access to Berry AI")
+    const { encryptedData, iv } = await req.json()
+    const encryptedBuffer = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+    const ivBuffer = Uint8Array.from(atob(iv), c => c.charCodeAt(0))
 
-    const { prompt } = await req.json()
-    if (!prompt) throw new Error("Prompt is required")
-    
-    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY')!)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" })
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: "AES-CBC", iv: ivBuffer },
+      cryptoKey,
+      encryptedBuffer
+    )
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
+    const result = new TextDecoder().decode(decryptedBuffer)
+    console.log("[Core] Link Established. Data decrypted successfully.")
 
-    return new Response(JSON.stringify({ text }), {
+    return new Response(JSON.stringify({ status: 'SUCCESS', result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
     })
 
   } catch (error: unknown) {
-    // High-integrity error handling as requested
-    const err = error as Error; 
-    console.error("Berry AI Error:", err.message);
+    // FIX: TYPE NARROWING
+    // We check if 'error' is an actual Error object to satisfy the Deno-TS compiler.
+    const errorMessage = error instanceof Error ? error.message : "An unexpected core failure occurred";
     
-    return new Response(JSON.stringify({ 
-      error: err.message || "An unexpected error occurred" 
-    }), {
-      status: 400,
+    console.error("[Decryption Error]", errorMessage)
+    
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400
     })
   }
 })

@@ -1,21 +1,24 @@
+/**
+ * ============================================================================
+ * 🔐 SECURE STORAGE (TITAN LAYER V1.1)
+ * ============================================================================
+ * Abstraction layer ensuring secrets are stored in the device's hardware
+ * Secure Enclave (iOS/Android).
+ * * FIX: Added SSR-safe window checks to prevent build-time crashes.
+ * ============================================================================
+ */
+
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-/**
- * ============================================================================
- * 🔐 SECURE STORAGE (TITAN LAYER)
- * ============================================================================
- * Abstraction layer ensuring secrets (Tokens, Biometric prefs) are stored
- * in the device's hardware Secure Enclave (iOS/Android).
- * * FALLBACK: Uses localStorage for Web.
- * ============================================================================
- */
+// Helper to determine if we are in a browser environment
+const isBrowser = typeof window !== 'undefined';
 
 export const setItem = async (key: string, value: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, value);
+      if (isBrowser) {
+        window.localStorage.setItem(key, value);
       }
     } else {
       await SecureStore.setItemAsync(key, value);
@@ -29,8 +32,8 @@ export const setItem = async (key: string, value: string): Promise<void> => {
 export const getItem = async (key: string): Promise<string | null> => {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        return localStorage.getItem(key);
+      if (isBrowser) {
+        return window.localStorage.getItem(key);
       }
       return null;
     } else {
@@ -45,8 +48,8 @@ export const getItem = async (key: string): Promise<string | null> => {
 export const deleteItem = async (key: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(key);
+      if (isBrowser) {
+        window.localStorage.removeItem(key);
       }
     } else {
       await SecureStore.deleteItemAsync(key);
@@ -56,7 +59,10 @@ export const deleteItem = async (key: string): Promise<void> => {
   }
 };
 
-// Export a storage adapter for Supabase Auth
+/**
+ * Supabase Auth Storage Adapter
+ * Designed to interface directly with the Supabase GoTrue singleton.
+ */
 export const secureStorage = {
   getItem: async (key: string): Promise<string | null> => {
     return await getItem(key);

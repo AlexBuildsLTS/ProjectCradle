@@ -1,6 +1,7 @@
 /**
- * PROJECT CRADLE: ENHANCED FAMILY DIRECTORY V3.0
+ * PROJECT CRADLE: ENHANCED FAMILY DIRECTORY V3.1
  * Path: app/(app)/admin/users.tsx
+ * THEME: PROJECT CRADLE (Teal #4FD1C7 | Obsidian #020617)
  */
 
 import { GlassCard } from '@/components/glass/GlassCard';
@@ -35,7 +36,7 @@ export default function AdminUsersScreen() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [roleModal, setRoleModal] = useState(false);
 
-  // ENHANCEMENT: Fetch all columns to ensure full profile visibility
+  // FETCH ALL REGISTERED PROFILES
   const loadUsers = async () => {
     setLoading(true);
     try {
@@ -47,7 +48,7 @@ export default function AdminUsersScreen() {
       if (error) throw error;
       setUsers(data || []);
     } catch (e) {
-      console.error('[Admin] Directory Fetch Failed:', e);
+      console.error('[Cradle Admin] Profile Load Failure:', e);
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export default function AdminUsersScreen() {
       loadUsers();
       setRoleModal(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Role Update Failed', e.message);
     }
   };
 
@@ -82,7 +83,7 @@ export default function AdminUsersScreen() {
         .eq('id', user.id);
       loadUsers();
     } catch (e: any) {
-      Alert.alert('Update Failed', e.message);
+      Alert.alert('Status Change Failed', e.message);
     }
   };
 
@@ -90,9 +91,7 @@ export default function AdminUsersScreen() {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>FAMILY DIRECTORY</Text>
-        <Text style={styles.headerSub}>
-          MANAGE {users.length} REGISTERED CORE ENTITIES
-        </Text>
+        <Text style={styles.headerSub}>CORE ENTITY MANAGEMENT</Text>
       </View>
 
       <View style={styles.searchSection}>
@@ -100,7 +99,7 @@ export default function AdminUsersScreen() {
           <Search size={18} color="#475569" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search families..."
+            placeholder="Search core profiles..."
             placeholderTextColor="#475569"
             value={search}
             onChangeText={setSearch}
@@ -114,8 +113,7 @@ export default function AdminUsersScreen() {
             .toLowerCase()
             .includes(search.toLowerCase()),
         )}
-        // ENHANCEMENT: Increased bottom padding to prevent tab bar overlap
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.list} // Critical bottom padding
         renderItem={({ item }) => {
           const isBanned = item.status === 'banned';
           const cardStyle = StyleSheet.flatten([
@@ -187,7 +185,7 @@ export default function AdminUsersScreen() {
       <Modal visible={roleModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <GlassCard style={styles.modalContent}>
-            <Text style={styles.modalTitle}>ASSIGN ACCESS ROLE</Text>
+            <Text style={styles.modalTitle}>UPDATE SYSTEM ACCESS</Text>
             {['MEMBER', 'PREMIUM_MEMBER', 'ADMIN'].map((r) => (
               <TouchableOpacity
                 key={r}
@@ -201,11 +199,7 @@ export default function AdminUsersScreen() {
               onPress={() => setRoleModal(false)}
               style={styles.closeBtn}
             >
-              <Text
-                style={{ color: '#475569', fontWeight: '900', fontSize: 12 }}
-              >
-                CLOSE
-              </Text>
+              <Text style={styles.closeBtnText}>CANCEL</Text>
             </TouchableOpacity>
           </GlassCard>
         </View>
@@ -253,7 +247,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  list: { paddingHorizontal: 20, paddingBottom: 120 }, // Bottom padding critical for tab bar
+  list: { paddingHorizontal: 20, paddingBottom: 120 }, // Fixed: Prevents overlap with tab bar
   userCard: { marginBottom: 12, padding: 16, borderRadius: 24 },
   bannedBorder: { borderColor: 'rgba(248, 113, 113, 0.15)' },
   cardRow: { flexDirection: 'row', alignItems: 'center' },
@@ -316,4 +310,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   closeBtn: { marginTop: 24, alignItems: 'center' },
+  closeBtnText: { color: '#475569', fontWeight: '900', fontSize: 12 },
 });

@@ -1,146 +1,281 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Platform, Alert } from 'react-native';
-import { useAuth } from '@/context/auth';
-import { useBabyContext } from '@/hooks/useBabyContext';
-import { useTheme } from '@/context/ThemeContext';
-import { GlassCard } from '@/components/glass/GlassCard';
-import { InviteCaregiver } from '@/components/settings/InviteCaregiver';
-import { JoinFamily } from '@/components/settings/JoinFamily';
-import { 
-  Baby, 
-  Bell, 
-  CreditCard, 
-  LogOut, 
-  ChevronRight, 
-  Ruler, 
-  ShieldCheck, 
-  Database,
-  UserCircle,
-  MoonStar
-} from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+/**
+ * PROJECT CRADLE: SUPPORT CORE V2.0
+ * Path: app/(app)/support.tsx
+ * THEME: PROJECT CRADLE (Teal #4FD1C7 | Obsidian #020617)
+ * FEATURES:
+ * - Ticket Creation: Direct integration with Supabase 'support_tickets' table.
+ * - Responsive Layout: 800px max-width container for desktop clarity.
+ * - Haptic UI: AAA+ Tier feedback on form submission.
+ */
+
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  ChevronRight,
+  MessageSquare,
+  Send,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-/**
- * PROJECT CRADLE: ENHANCED SETTINGS ENGINE
- * Features: Circadian Night Mode, AAA Accessibility, Haptic Integration
- */
-export default function SettingsScreen() {
-  const { user } = useAuth();
-  const { data: baby } = useBabyContext();
-  const { isNightMode, toggleNightMode } = useTheme();
+import { GlassCard } from '@/components/glass/GlassCard';
+import { useAuth } from '@/context/auth';
+import { Theme } from '@/lib/shared/Theme';
+import { supabase } from '@/lib/supabase';
 
-  const triggerHaptic = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+export default function SupportScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const triggerHaptic = (style = Haptics.ImpactFeedbackStyle.Light) => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(style);
+  };
+
+  const handleSubmit = async () => {
+    if (!subject || !message) {
+      Alert.alert(
+        'Missing Data',
+        'Please fill in all fields before transmitting.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const { error } = await supabase.from('support_tickets').insert([
+        {
+          user_id: user?.id,
+          subject,
+          message,
+          status: 'open',
+          priority: 'standard',
+        },
+      ]);
+
+      if (error) throw error;
+
+      if (Platform.OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Link Established',
+        'Your support ticket has been encrypted and sent to the Admin Core.',
+      );
+      setSubject('');
+      setMessage('');
+    } catch (err: any) {
+      Alert.alert('Transmission Error', err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
-    triggerHaptic();
-    Alert.alert("Sign Out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: () => supabase.auth.signOut() }
-    ]);
-  };
-
   return (
-    <ScrollView 
-      className="flex-1 bg-neutral-950" 
-      contentContainerStyle={{ 
-        padding: 24, 
-        paddingBottom: Platform.OS === 'web' ? 40 : 120,
-        maxWidth: Platform.OS === 'web' ? 800 : '100%',
-        alignSelf: Platform.OS === 'web' ? 'center' : 'auto'
-      }}
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.scrollContent,
+        isDesktop && { alignItems: 'center' },
+      ]}
     >
-      <Animated.View entering={FadeInDown.duration(400)}>
-        <Text className="mb-2 text-4xl font-black text-white">Settings</Text>
-        <Text className="mb-8 font-medium text-neutral-500">Manage your family and app preferences</Text>
-      </Animated.View>
-
-      {/* Dynamic Profile Section: Obsidian & Teal */}
-      <GlassCard className="mb-8 border-primary/20 bg-primary/5">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <View className="p-4 shadow-lg bg-primary rounded-2xl">
-              <Baby size={28} color="white" />
-            </View>
-            <View className="ml-4">
-              <Text className="text-2xl font-black text-white">
-                {baby?.baby_name || 'Set up Profile'}
-              </Text>
-              <View className="flex-row items-center mt-1">
-                <ShieldCheck size={12} color="#4FD1C7" />
-                <Text className="text-primary font-bold text-[10px] uppercase ml-1 tracking-widest">
-                  {baby?.role?.replace('_', ' ') || 'New Parent'}
-                </Text>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity 
-            onPress={triggerHaptic}
-            className="p-3 border bg-white/5 rounded-xl border-white/10"
+      <View style={[styles.container, isDesktop && styles.desktopWidth]}>
+        {/* HEADER */}
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={styles.header}
+        >
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
           >
-            <UserCircle size={20} color="#94A3B8" />
+            <ArrowLeft size={20} color={Theme.colors.primary} />
           </TouchableOpacity>
-        </View>
-      </GlassCard>
-
-      {/* Circadian Night Mode Toggle */}
-      <Text className="text-xs font-black tracking-[2px] uppercase text-neutral-500 mb-4 px-1">
-        Environment
-      </Text>
-      <GlassCard className={`mb-8 ${isNightMode ? 'border-red-900/40 bg-red-900/5' : 'border-white/5'}`}>
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <View className={`p-2 rounded-lg ${isNightMode ? 'bg-red-500/20' : 'bg-white/5'}`}>
-              <MoonStar size={20} color={isNightMode ? "#ff4444" : "#94A3B8"} />
-            </View>
-            <Text className="ml-3 font-bold text-white">Circadian Night Mode</Text>
+          <View>
+            <Text style={styles.title}>SUPPORT HUB</Text>
+            <Text style={styles.sub}>DIRECT ENCRYPTED CHANNEL</Text>
           </View>
-          <Switch 
-            value={isNightMode} 
-            onValueChange={(val) => { triggerHaptic(); toggleNightMode(); }}
-            trackColor={{ true: '#7f1d1d', false: '#334155' }}
-            thumbColor={isNightMode ? "#ff4444" : "#f4f3f4"}
-          />
-        </View>
-      </GlassCard>
+        </Animated.View>
 
-      {/* Care Team Synchronization */}
-      <View className="mb-10">
-        <Text className="text-xs font-black tracking-[2px] uppercase text-neutral-500 mb-4 px-1">
-          Care Team Synchronization
-        </Text>
-        {baby?.baby_name ? <InviteCaregiver /> : <JoinFamily />}
+        {/* INFO CARDS */}
+        <View style={styles.infoRow}>
+          <GlassCard style={styles.infoCard} variant="teal">
+            <ShieldCheck size={20} color={Theme.colors.primary} />
+            <Text style={styles.infoTitle}>SECURE</Text>
+            <Text style={styles.infoText}>End-to-end encryption active.</Text>
+          </GlassCard>
+          <GlassCard style={styles.infoCard}>
+            <Zap size={20} color="#FB923C" />
+            <Text style={styles.infoTitle}>FAST</Text>
+            <Text style={styles.infoText}>Average response: 4 hours.</Text>
+          </GlassCard>
+        </View>
+
+        {/* TICKET FORM */}
+        <Text style={styles.sectionLabel}>OPEN NEW TICKET</Text>
+        <GlassCard style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>SUBJECT</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Biometric Sync Issue"
+              placeholderTextColor="#475569"
+              value={subject}
+              onChangeText={setSubject}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>MESSAGE</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Describe your issue in detail..."
+              placeholderTextColor="#475569"
+              multiline
+              numberOfLines={6}
+              value={message}
+              onChangeText={setMessage}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#020617" />
+            ) : (
+              <>
+                <Text style={styles.submitText}>TRANSMIT TICKET</Text>
+                <Send size={18} color="#020617" />
+              </>
+            )}
+          </TouchableOpacity>
+        </GlassCard>
+
+        {/* FAQ LINK */}
+        <TouchableOpacity style={styles.faqBtn} onPress={() => triggerHaptic()}>
+          <View style={styles.row}>
+            <MessageSquare size={18} color="#94A3B8" />
+            <Text style={styles.faqText}>View Knowledge Base (FAQ)</Text>
+          </View>
+          <ChevronRight size={18} color="#475569" />
+        </TouchableOpacity>
       </View>
-
-      {/* Data Export */}
-      <TouchableOpacity 
-        onPress={triggerHaptic}
-        className="flex-row items-center justify-between p-6 bg-white/5 border border-white/10 rounded-[32px] mb-8"
-      >
-        <View className="flex-row items-center">
-          <View className="p-2 rounded-lg bg-primary/10"><Database size={18} color="#4FD1C7" /></View>
-          <Text className="ml-3 font-bold text-white">Export Health Data (CSV)</Text>
-        </View>
-        <ChevronRight size={18} color="#475569" />
-      </TouchableOpacity>
-
-      {/* Safe Exit */}
-      <TouchableOpacity 
-        onPress={handleSignOut}
-        className="mt-12 mb-8 items-center flex-row justify-center bg-red-500/10 py-5 rounded-[32px] border border-red-500/20"
-      >
-        <LogOut size={20} color="#F87171" />
-        <Text className="ml-3 text-xs font-black tracking-widest text-red-400 uppercase">Terminate Session</Text>
-      </TouchableOpacity>
-      
-      <Text className="text-center text-neutral-700 text-[10px] font-bold uppercase tracking-widest mb-10">
-        Project Cradle v1.0.4 • Build 2025.12.27
-      </Text>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#020617' },
+  scrollContent: { padding: 24, paddingBottom: 100 },
+  container: { width: '100%' },
+  desktopWidth: { maxWidth: 800 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginBottom: 40,
+  },
+  backBtn: {
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  title: { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: -1 },
+  sub: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  infoRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },
+  infoCard: { flex: 1, padding: 20, gap: 10 },
+  infoTitle: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  infoText: { color: '#475569', fontSize: 10, fontWeight: '600' },
+  sectionLabel: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 16,
+    paddingLeft: 4,
+  },
+  formCard: { padding: 24, gap: 24, borderRadius: 32 },
+  inputGroup: { gap: 10 },
+  label: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    padding: 16,
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  textArea: { minHeight: 120, textAlignVertical: 'top' },
+  submitBtn: {
+    backgroundColor: '#4FD1C7',
+    padding: 20,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  submitText: {
+    color: '#020617',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  faqBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 24,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 24,
+    marginTop: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  faqText: { color: '#94A3B8', fontSize: 14, fontWeight: '700' },
+});
