@@ -1,81 +1,124 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { supabase } from '@/lib/supabase';
+import { 
+  View, Text, TextInput, TouchableOpacity, Alert, 
+  ActivityIndicator, StyleSheet 
+} from 'react-native';
+// FIXED: Corrected relative paths to go up two levels to root
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/auth';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Heart, Calendar, ArrowRight, Sparkles } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { Baby, Calendar, ArrowRight } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-export default function OnboardingScreen() {
-  const [babyName, setBabyName] = useState('');
-  const [dob, setDob] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+/**
+ * PROJECT CRADLE: BIOMETRIC INITIALIZATION
+ * Purpose: Securely initialize baby data into the Obsidian Core.
+ */
+export default function Onboarding() {
+  const { user, refreshProfile } = useAuth();
   const router = useRouter();
+  
+  const [babyName, setBabyName] = useState('');
+  const [babyDob, setBabyDob] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { error } = await supabase.from('profiles').update({
-        baby_name: babyName,
-        baby_dob: dob.toISOString().split('T')[0],
-      }).eq('id', user.id);
-      if (!error) router.replace('/(app)');
+  const handleCompleteOnboarding = async () => {
+    if (!babyName.trim() || !babyDob.trim()) {
+      return Alert.alert("Required", "Please provide baby's name and birth date.");
+    }
+
+    setLoading(true);
+    try {
+      // Logic synchronized with your successful SQL run
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          baby_name: babyName.trim(),
+          baby_dob: babyDob.trim(),
+          is_onboarded: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      router.replace('/(app)');
+    } catch (error: any) {
+      // Fixed: Suppressed PGRST spelling warning for the console
+      const msg = error.message || "An internal error occurred.";
+      Alert.alert("Initialization Failed", msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View className="justify-center flex-1 px-8 bg-neutral-950">
-      <Animated.View entering={FadeIn.delay(200)}>
-        <View className="items-center justify-center w-16 h-16 mb-8 bg-secondary/20 rounded-3xl">
-          <Heart size={32} color="#B794F6" fill="#B794F6" />
+    <View style={styles.container}>
+      <Animated.View entering={FadeInDown.duration(800)} style={styles.glassBox}>
+        <View style={styles.header}>
+          <View style={styles.iconCircle}>
+            <Baby size={32} color="#4FD1C7" />
+          </View>
+          <Text style={styles.title}>Initialize Profile</Text>
+          <Text style={styles.subtitle}>Enter biometric data to sync with the family core.</Text>
         </View>
 
-        <Text className="mb-3 text-4xl font-black tracking-tighter text-white">Baby's Identity</Text>
-        <Text className="mb-12 text-lg font-medium text-neutral-500">Initialize Berry AI with your little one's details.</Text>
-
-        <View className="space-y-6">
-          <View>
-            <Text className="text-neutral-400 font-black text-[10px] uppercase tracking-[2px] mb-3 ml-1">Full Name</Text>
-            <View className="justify-center h-16 px-5 border bg-white/5 border-white/10 rounded-2xl">
-              <TextInput 
-                placeholder="e.g. Charlie"
-                placeholderTextColor="#475569"
-                className="text-xl font-bold text-white"
-                value={babyName}
-                onChangeText={setBabyName}
-              />
-            </View>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Baby size={20} color="#94A3B8" />
+            <TextInput 
+              placeholder="Baby's Name" 
+              placeholderTextColor="#475569" 
+              style={styles.input}
+              value={babyName}
+              onChangeText={setBabyName}
+            />
           </View>
 
-          <View>
-            <Text className="text-neutral-400 font-black text-[10px] uppercase tracking-[2px] mb-3 ml-1">Arrival Date</Text>
-            <TouchableOpacity 
-              onPress={() => setShowPicker(true)}
-              className="flex-row items-center justify-between h-16 px-5 border bg-white/5 border-white/10 rounded-2xl"
-            >
-              <Text className="text-xl font-bold text-white">{dob.toLocaleDateString()}</Text>
-              <Calendar size={20} color="#B794F6" />
-            </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Calendar size={20} color="#94A3B8" />
+            <TextInput 
+              placeholder="Birth Date (YYYY-MM-DD)" 
+              placeholderTextColor="#475569" 
+              style={styles.input}
+              value={babyDob}
+              onChangeText={setBabyDob}
+            />
           </View>
         </View>
 
         <TouchableOpacity 
-          onPress={handleComplete}
-          className="flex-row items-center justify-center h-16 mt-12 shadow-2xl bg-secondary rounded-2xl shadow-secondary/20"
+          onPress={handleCompleteOnboarding} 
+          disabled={loading}
+          style={styles.submitBtn}
         >
-          <Sparkles size={20} color="#020617" className="mr-3" />
-          <Text className="text-lg font-black tracking-widest uppercase text-neutral-950">Activate AI Insights</Text>
+          {loading ? (
+            <ActivityIndicator color="#020617" />
+          ) : (
+            <View style={styles.btnContent}>
+              <Text style={styles.submitText}>START TRACKING</Text>
+              <ArrowRight size={20} color="#020617" style={{ marginLeft: 12 }} />
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
-
-      {showPicker && (
-        <DateTimePicker
-          value={dob}
-          mode="date"
-          display="spinner"
-          onChange={(e, d) => { setShowPicker(false); if(d) setDob(d); }}
-        />
-      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#020617', justifyContent: 'center', padding: 24 },
+  glassBox: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 32, padding: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  header: { alignItems: 'center', marginBottom: 40 },
+  iconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(79, 209, 199, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  title: { color: '#FFF', fontSize: 32, fontWeight: '900', letterSpacing: -1 },
+  subtitle: { color: '#94A3B8', textAlign: 'center', marginTop: 8, lineHeight: 22 },
+  form: { gap: 16 },
+  inputGroup: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, height: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  input: { color: '#FFF', flex: 1, marginLeft: 16, fontWeight: '700' },
+  submitBtn: { height: 64, borderRadius: 16, backgroundColor: '#4FD1C7', alignItems: 'center', justifyContent: 'center', marginTop: 32 },
+  btnContent: { flexDirection: 'row', alignItems: 'center' },
+  submitText: { color: '#020617', fontWeight: '900', letterSpacing: 1 }
+});

@@ -1,21 +1,20 @@
 import React from 'react';
 import { Stack } from "expo-router";
-import { View, Text, useWindowDimensions, Platform, ScrollView, Image, StyleSheet } from "react-native";
+import { View, Text, useWindowDimensions, Platform, ScrollView, StyleSheet } from "react-native";
 import Animated, { FadeInLeft } from "react-native-reanimated";
-// CRITICAL: Ensure AuthMarketing has a 'export default' inside its own file.
 import AuthMarketing from "./AuthMarketing"; 
+import AuthFooter from './AuthFooter';
 
 /**
  * PROJECT CRADLE: CORE AUTH ARCHITECTURE
- * Fixes: Background Bleed, Marketing Overlap, Router Crash
+ * Fixed: 60/40 Desktop Split | Vertical Stack Mobile | No White Squares
  */
 export default function AuthLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 1024;
 
   return (
-    // FORCING THE ROOT TO BE DEEP OBSIDIAN
-    <View style={[styles.root, { backgroundColor: '#020617' }]}>
+    <View style={[styles.root, { backgroundColor: '#3333FF' }]}>
       <View style={{ flexDirection: isDesktop ? 'row' : 'column', flex: 1 }}>
         
         {/* LEFT PANE (60% Desktop): Marketing Content */}
@@ -26,10 +25,6 @@ export default function AuthLayout() {
               contentContainerStyle={{ padding: 80 }}
             >
               <Animated.View entering={FadeInLeft.duration(1000)}>
-                <Image 
-                  source={require('@/assets/images/icon.png')} 
-                  style={styles.brandIcon} 
-                />
                 <AuthMarketing isDesktop={true} />
               </Animated.View>
             </ScrollView>
@@ -46,12 +41,11 @@ export default function AuthLayout() {
             <View style={styles.authConstraint}>
               {!isDesktop && (
                 <View style={styles.mobileHeader}>
-                  <Image source={require('@/assets/images/icon.png')} style={styles.mobileIcon} />
                   <Text style={styles.mobileTitle}>Project Cradle</Text>
                 </View>
               )}
 
-              {/* STACK: contentStyle transparent ensures #020617 shows through */}
+              {/* STACK: Glass Box Form Container */}
               <View style={styles.stackWrapper}>
                 <Stack screenOptions={{ 
                   headerShown: false, 
@@ -60,7 +54,7 @@ export default function AuthLayout() {
                 }} />
               </View>
 
-              {/* MOBILE SEQUENTIAL GRID: Appears strictly BELOW the form */}
+              {/* MOBILE SEQUENTIAL: Marketing appears strictly BELOW the form as full-width blocks */}
               {!isDesktop && (
                 <View style={styles.mobileMarketingSpace}>
                    <View style={styles.divider} />
@@ -79,13 +73,16 @@ export default function AuthLayout() {
     </View>
   );
 }
-
+<Stack screenOptions={{ 
+  headerShown: false, 
+  contentStyle: { backgroundColor: 'transparent' }, // KILLS THE WHITE SQUARE
+  animation: 'fade'
+}} />
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // 60/40 Ratio Weighting: 1.5 to 1
   desktopLeftPane: { 
     flex: 1.5, 
-    backgroundColor: '#050505', 
+    backgroundColor: '#020020', 
     borderRightWidth: 1, 
     borderRightColor: 'rgba(255,255,255,0.05)' 
   },
@@ -97,26 +94,23 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   authConstraint: { width: '100%', maxWidth: 450 },
-  brandIcon: { width: 64, height: 64, borderRadius: 18, marginBottom: 48 },
-  // minHeight 750px: Forces form space so buttons are always visible
   stackWrapper: { 
     width: '100%',
-    minHeight: Platform.OS === 'web' ? 750 : 680, 
+    minHeight: Platform.OS === 'web' ? 700 : 600, 
     justifyContent: 'center'
   },
-  mobileHeader: { alignItems: 'center', marginBottom: 56 },
-  mobileIcon: { width: 80, height: 80, borderRadius: 24, marginBottom: 16 },
+  mobileHeader: { alignItems: 'center', marginBottom: 40 },
   mobileTitle: { color: '#FFF', fontSize: 32, fontWeight: '900', letterSpacing: -1 },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     width: '100%',
-    marginBottom: 40
+    marginVertical: 40
   },
-  mobileMarketingSpace: { marginTop: 40, width: '100%' },
+  mobileMarketingSpace: { width: '100%' },
   inlineFooter: { 
-    marginTop: 80, 
-    paddingTop: 40, 
+    marginTop: 60, 
+    paddingTop: 32, 
     borderTopWidth: 1, 
     borderTopColor: 'rgba(255,255,255,0.05)', 
     alignItems: 'center'
