@@ -1,128 +1,125 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Theme } from './shared/Theme';
+import { Milk, Moon, Activity, Zap, ChevronRight, Bot, Sparkles } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
-import { useSyncEngine } from '@/hooks/useSyncEngine';
-import { useBiometrics } from '@/hooks/useBiometrics';
-import { useBabyContext } from '@/hooks/useBabyContext';
-import { SleepTrackerCard } from '@/components/tracking/SleepTrackerCard';
-import { TimelineItem } from '@/components/tracking/TimelineItem';
-import { BerryAssistant } from '@/components/ai/BerryAssistant';
-import { GlassCard } from '@/components/glass/GlassCard';
-import { DashboardFooter } from '@/components/navigation/DashboardFooter';
-import { Plus, Coffee, Utensils, Droplets, BrainCircuit, TrendingUp, Zap } from 'lucide-react-native';
-import * as Crypto from 'expo-crypto';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 
-export default function Dashboard() {
-  const { user } = useAuth();
-  const { data: baby, isLoading: babyLoading } = useBabyContext();
-  const isWeb = Platform.OS === 'web';
-  
-  useSyncEngine(user?.id);
-  const { logEvent } = useBiometrics();
+/**
+ * PROJECT CRADLE: INTELLIGENCE HUB (V1.0)
+ * Responsive Glassmorphism Grid for Feeding, Sleep, and Growth.
+ */
+export default function DashboardHub() {
+  const { session } = useAuth();
+  const [babyName, setBabyName] = useState('Your Baby');
 
-  const handleQuickLog = (type: 'SLEEP' | 'FEED' | 'DIAPER') => {
-    logEvent.mutate({
-      correlation_id: Crypto.randomUUID(),
-      event_type: type,
-      timestamp: new Date().toISOString(),
-      metadata: { 
-        notes: `Quick-logged from ${Platform.OS} dashboard`,
-        logged_by: user?.email 
-      }
-    });
-  };
-
-  if (babyLoading) return (
-    <View className="items-center justify-center flex-1 bg-neutral-950">
-      <ActivityIndicator size="large" color="#4FD1C7" />
-    </View>
-  );
+  useEffect(() => {
+    async function fetchBabyData() {
+      if (!session?.user?.id) return;
+      const { data } = await supabase.from('babies').select('name').single();
+      if (data?.name) setBabyName(data.name);
+    }
+    fetchBabyData();
+  }, [session]);
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-950">
-      <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView 
-        className="flex-1 px-6 pt-4" 
-        contentContainerStyle={{ 
-            paddingBottom: 140,
-            maxWidth: isWeb ? 1200 : '100%',
-            alignSelf: isWeb ? 'center' : 'auto'
-        }}
-      >
-        
-        {/* Header Section */}
-        <Animated.View entering={FadeInUp.delay(100)} className="flex-row items-end justify-between mb-8">
-          <View>
-            <Text className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Good Morning</Text>
-            <Text className="text-3xl font-black leading-tight text-white">{baby?.baby_name || 'Parent'}'s Day</Text>
-          </View>
-          <View className="items-center justify-center w-12 h-12 bg-secondary/20 rounded-2xl">
-            <Coffee size={24} color="#B794F6" />
-          </View>
-        </Animated.View>
-
-        {/* AI Insight Section */}
-        <GlassCard className="mb-6 border-secondary/20 bg-secondary/5">
-          <View className="flex-row items-center mb-4">
-            <BrainCircuit size={20} color="#B794F6" />
-            <Text className="ml-3 text-xs font-black tracking-widest uppercase text-secondary">
-              Berry AI Insight
-            </Text>
-          </View>
-          <Text className="text-lg font-bold leading-7 text-white">
-            Based on the last 3 logs, {baby?.baby_name || 'your baby'} is showing a 15% increase in deep sleep duration.
-          </Text>
-        </GlassCard>
-
-        {/* Growth & Activity Mini-Cards */}
-        <View className={`${isWeb ? 'flex-row space-x-6' : 'flex-row space-x-4'} mb-8`}>
-           <GlassCard className="flex-1 p-6">
-              <TrendingUp size={24} color="#4FD1C7" />
-              <Text className="mt-4 mb-1 text-xs font-bold uppercase text-neutral-400">Percentile</Text>
-              <Text className="text-2xl font-black text-white">72nd</Text>
-           </GlassCard>
-           <GlassCard className="flex-1 p-6">
-              <Zap size={24} color="#F6AD55" />
-              <Text className="mt-4 mb-1 text-xs font-bold uppercase text-neutral-400">Wake Window</Text>
-              <Text className="text-2xl font-black text-white">1h 45m</Text>
-           </GlassCard>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>{babyName}'s Hub</Text>
+          <Text style={styles.subGreeting}>System Active • Real-time Monitoring</Text>
         </View>
-
-        <SleepTrackerCard lastSleepTime="2h 45m ago" onPress={() => handleQuickLog('SLEEP')} />
-
-        {/* Quick Action Buttons */}
-        <View className="flex-row justify-between mt-8 mb-10">
-          <TouchableOpacity onPress={() => handleQuickLog('FEED')} className="items-center">
-            <View className="items-center justify-center w-16 h-16 border shadow-sm bg-white/5 rounded-3xl border-white/10">
-              <Utensils size={24} color="#4FD1C7" />
-            </View>
-            <Text className="text-neutral-400 font-bold mt-2 text-[10px]">FEED</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleQuickLog('DIAPER')} className="items-center">
-            <View className="items-center justify-center w-16 h-16 border shadow-sm bg-white/5 rounded-3xl border-white/10">
-              <Droplets size={24} color="#F6AD55" />
-            </View>
-            <Text className="text-neutral-400 font-bold mt-2 text-[10px]">DIAPER</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="items-center">
-            <View className="items-center justify-center w-16 h-16 shadow-lg bg-primary rounded-3xl">
-              <Plus size={24} color="white" />
-            </View>
-            <Text className="text-primary font-bold mt-2 text-[10px]">MORE</Text>
-          </TouchableOpacity>
+        <View style={styles.aiBadge}>
+          <Bot size={14} color={Theme.colors.secondary} />
+          <Text style={styles.aiText}>Berry AI Online</Text>
         </View>
+      </View>
 
-        <Text className="mb-6 text-xl font-bold text-white">Recent Activity</Text>
-        <TimelineItem type="SLEEP" time="10:30 AM" detail="Napped for 45 mins." />
-        <TimelineItem type="FEED" time="08:15 AM" detail="Logged 120ml Formula." />
+      {/* QUICK LOG HERO: AAA Teal Glassmorphism */}
+      <TouchableOpacity style={styles.heroCard}>
+        <View style={styles.zapCircle}>
+          <Zap size={24} color="#020617" fill="#020617" />
+        </View>
+        <Text style={styles.heroText}>QUICK LOG RECENT FEED</Text>
+        <Sparkles size={20} color="rgba(2, 6, 23, 0.4)" />
+      </TouchableOpacity>
 
-        <DashboardFooter />
-      </ScrollView>
-      <BerryAssistant />
-    </SafeAreaView>
+      {/* INTELLIGENCE GRID: Responsive Columns */}
+      <View style={styles.grid}>
+        <GlassCard 
+          icon={Milk} 
+          label="Last Feed" 
+          value="2h 14m ago" 
+          sub="Breast milk • 120ml" 
+          color={Theme.colors.primary} 
+        />
+        <GlassCard 
+          icon={Moon} 
+          label="Current Sleep" 
+          value="Active" 
+          sub="Duration: 45m" 
+          color={Theme.colors.secondary} 
+        />
+        <GlassCard 
+          icon={Activity} 
+          label="Growth" 
+          value="7.2 kg" 
+          sub="92nd Percentile" 
+          color={Theme.colors.success} 
+        />
+      </View>
+      
+      {/* BERRY AI PREDICTION: Dynamic Insights */}
+      <View style={styles.insightCard}>
+        <View style={styles.insightHeader}>
+          <Bot size={18} color={Theme.colors.secondary} />
+          <Text style={styles.insightTitle}>BERRY AI PREDICTION</Text>
+        </View>
+        <Text style={styles.insightBody}>
+          Based on today's activity, your baby's next "SweetSpot" for sleep is in **15 minutes**. Prepare the crib for a high-quality nap.
+        </Text>
+        <TouchableOpacity style={styles.insightBtn}>
+          <Text style={styles.insightBtnText}>VIEW OPTIMIZED SCHEDULE</Text>
+          <ChevronRight size={16} color={Theme.colors.secondary} />
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
+
+// Internal High-Fidelity Component
+const GlassCard = ({ icon: Icon, label, value, sub, color }: any) => (
+  <TouchableOpacity style={styles.card}>
+    <View style={[styles.iconCircle, { backgroundColor: `${color}15` }]}>
+      <Icon size={20} color={color} />
+    </View>
+    <Text style={styles.cardLabel}>{label}</Text>
+    <Text style={styles.cardValue}>{value}</Text>
+    <Text style={styles.cardSub}>{sub}</Text>
+  </TouchableOpacity>
+);
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#020617' },
+  content: { padding: 24, maxWidth: 1200, alignSelf: 'center', width: '100%' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
+  greeting: { color: '#FFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
+  subGreeting: { color: '#94A3B8', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  aiBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(183, 148, 246, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(183, 148, 246, 0.2)' },
+  aiText: { color: '#B794F6', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  heroCard: { backgroundColor: '#4FD1C7', padding: 24, borderRadius: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, elevation: 10, shadowColor: '#4FD1C7', shadowOpacity: 0.3, shadowRadius: 20 },
+  zapCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(2, 6, 23, 0.1)', alignItems: 'center', justifyContent: 'center' },
+  heroText: { color: '#020617', fontWeight: '900', letterSpacing: 1.5, fontSize: 14 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  card: { flex: 1, minWidth: Platform.OS === 'web' ? 250 : '45%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 28, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  iconCircle: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  cardLabel: { color: '#94A3B8', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
+  cardValue: { color: '#FFF', fontSize: 20, fontWeight: '800', marginVertical: 8 },
+  cardSub: { color: '#475569', fontSize: 12, fontWeight: '600' },
+  insightCard: { marginTop: 24, backgroundColor: 'rgba(183, 148, 246, 0.04)', borderRadius: 32, padding: 28, borderWidth: 1, borderColor: 'rgba(183, 148, 246, 0.15)' },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  insightTitle: { color: '#B794F6', fontSize: 11, fontWeight: '900', letterSpacing: 2 },
+  insightBody: { color: '#F7FAFC', fontSize: 16, lineHeight: 24, fontWeight: '500' },
+  insightBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20 },
+  insightBtnText: { color: '#B794F6', fontSize: 12, fontWeight: '900', letterSpacing: 1 }
+});
