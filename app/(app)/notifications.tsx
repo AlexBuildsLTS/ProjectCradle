@@ -1,8 +1,8 @@
 import { Bell, Clock } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Theme } from '../../lib/shared/Theme';
 import { supabase } from '../../lib/supabase';
-import { Theme } from './shared/Theme';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);

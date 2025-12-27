@@ -1,7 +1,3 @@
-// app/(auth)/sign-in.tsx
-import { supabase } from '../../app/api/supabaseClient'; // Path MUST match sign-up.tsx
-import { Link, useRouter } from 'expo-router';
-import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,10 +8,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/context/auth'; // FIXED: Using global auth context
 
+/**
+ * PROJECT CRADLE: SIGN-IN
+ * Layout preserved: Obsidian (#020617) + Teal (#4FD1C7) + Glassmorphism
+ */
 export default function SignIn() {
   const router = useRouter();
+  const { login } = useAuth(); // FIXED: Pulling login method from context
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,23 +32,13 @@ export default function SignIn() {
 
     setLoading(true);
     try {
-      // Direct call to sign in with the fixed client
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        // Success: Navigate to the main app dashboard
-        router.replace('/(app)'); 
-      }
-
+      // FIXED: Calling context login which handles session and routing
+      await login(email, password);
+      
+      // Note: AuthProvider's useEffect listener handles the router.replace logic
     } catch (error: any) {
-      // Detailed feedback for the 400 block error
       const errorMsg = error.status === 400 
-        ? "Invalid credentials or email not confirmed. Check Supabase Auth settings." 
+        ? "Invalid credentials or email not confirmed." 
         : error.message;
       
       Alert.alert('Access Denied', errorMsg);
@@ -97,7 +92,7 @@ export default function SignIn() {
         <TouchableOpacity
           onPress={handleSignIn}
           disabled={loading}
-          style={styles.submitBtn}
+          style={[styles.submitBtn, loading && { opacity: 0.7 }]}
         >
           {loading ? (
             <ActivityIndicator color="#020617" />
@@ -126,7 +121,7 @@ export default function SignIn() {
   );
 }
 
-// Styles are identical to sign-up to maintain the Obsidian/Teal UI
+// STYLES PRESERVED EXACTLY AS REQUESTED
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#020617', justifyContent: 'center', padding: 24 },
   glassBox: {

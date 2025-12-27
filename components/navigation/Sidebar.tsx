@@ -1,4 +1,5 @@
-import { Link, usePathname } from "expo-router";
+import * as Haptics from 'expo-haptics';
+import { Link, usePathname } from 'expo-router';
 import {
   Activity,
   Baby,
@@ -8,24 +9,23 @@ import {
   Settings,
   Sparkles,
   Utensils,
-} from "lucide-react-native";
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeInLeft } from "react-native-reanimated";
-import { triggerLightImpact } from "../../app/(app)/(mobile)/MobileHaptics";
-import { Theme } from "../../app/(app)/shared/Theme";
+} from 'lucide-react-native';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInLeft } from 'react-native-reanimated';
+import { Theme } from '../../lib/shared/Theme';
 
 /**
  * PROJECT CRADLE: ENHANCED OBSIDIAN SIDEBAR
  * Features: AAA Glassmorphism, Route Synchronization, Melatonin-Safe Contrast
  */
 const NAV_ITEMS = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "/(app)" },
-  { name: "Feeding", icon: Utensils, href: "/(app)/feeding" },
-  { name: "Growth", icon: LineChart, href: "/(app)/growth" },
-  { name: "Health", icon: Activity, href: "/(app)/health" },
-  { name: "Journal", icon: ImageIcon, href: "/(app)/journal" },
-  { name: "Settings", icon: Settings, href: "/(app)/settings" },
+  { name: 'Dashboard', icon: LayoutDashboard, href: '/(app)' },
+  { name: 'Feeding', icon: Utensils, href: '/(app)/feeding' },
+  { name: 'Growth', icon: LineChart, href: '/(app)/growth' },
+  { name: 'Health', icon: Activity, href: '/(app)/health' },
+  { name: 'Journal', icon: ImageIcon, href: '/(app)/journal' },
+  { name: 'Settings', icon: Settings, href: '/(app)/settings' },
 ];
 
 export const Sidebar = ({ className }: { className?: string }) => {
@@ -67,16 +67,16 @@ export const Sidebar = ({ className }: { className?: string }) => {
               <TouchableOpacity
                 onPress={handlePress}
                 className={`flex-row items-center p-4 rounded-2xl transition-all ${
-                  isActive ? "bg-white/5 border border-white/10" : "opacity-70"
+                  isActive ? 'bg-white/5 border border-white/10' : 'opacity-70'
                 }`}
               >
                 <item.icon
                   size={20}
-                  color={isActive ? Theme.colors.primary : "#94A3B8"}
+                  color={isActive ? Theme.colors.primary : '#94A3B8'}
                 />
                 <Text
                   className={`ml-4 font-bold text-base ${
-                    isActive ? "text-white" : "text-neutral-500"
+                    isActive ? 'text-white' : 'text-neutral-500'
                   }`}
                 >
                   {item.name}
@@ -107,3 +107,6 @@ export const Sidebar = ({ className }: { className?: string }) => {
     </Animated.View>
   );
 };
+function triggerLightImpact() {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+}

@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import { GlassCard } from '@/components/glass/GlassCard';
+import { Theme } from '@/lib/shared/Theme';
+import { BrainCircuit, CheckCircle2, Circle } from 'lucide-react-native';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { Badge } from '../ui/Badge';
-import { CheckCircle2, Circle, BrainCircuit } from 'lucide-react-native';
-import { Theme } from '@/app/(app)/shared/Theme';
 
 const MILESTONES = [
   { id: 1, title: 'Rolling Over', status: 'completed', age: '4m' },
@@ -27,9 +27,11 @@ export const MilestoneChecklist = () => {
 
       <GlassCard className="mb-6">
         {MILESTONES.map((m, i) => (
-          <TouchableOpacity 
-            key={m.id} 
-            className={`flex-row items-center justify-between py-4 ${i !== MILESTONES.length - 1 ? 'border-b border-white/5' : ''}`}
+          <TouchableOpacity
+            key={m.id}
+            className={`flex-row items-center justify-between py-4 ${
+              i !== MILESTONES.length - 1 ? 'border-b border-white/5' : ''
+            }`}
           >
             <View className="flex-row items-center">
               {m.status === 'completed' ? (
@@ -37,11 +39,17 @@ export const MilestoneChecklist = () => {
               ) : (
                 <Circle size={20} color="#475569" />
               )}
-              <Text className={`ml-4 font-bold ${m.status === 'completed' ? 'text-white' : 'text-neutral-500'}`}>
+              <Text
+                className={`ml-4 font-bold ${
+                  m.status === 'completed' ? 'text-white' : 'text-neutral-500'
+                }`}
+              >
                 {m.title}
               </Text>
             </View>
-            <Text className="text-[10px] font-black text-neutral-600 uppercase tracking-tighter">{m.age}</Text>
+            <Text className="text-[10px] font-black text-neutral-600 uppercase tracking-tighter">
+              {m.age}
+            </Text>
           </TouchableOpacity>
         ))}
       </GlassCard>
@@ -55,7 +63,8 @@ export const MilestoneChecklist = () => {
           </Text>
         </View>
         <Text className="text-sm leading-6 text-white">
-          To encourage "Pushing up on arms," try 5-minute Tummy Time sessions twice daily. Use a high-contrast mirror to keep interest.
+          To encourage "Pushing up on arms," try 5-minute Tummy Time sessions
+          twice daily. Use a high-contrast mirror to keep interest.
         </Text>
       </GlassCard>
     </View>

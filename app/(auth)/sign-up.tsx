@@ -3,19 +3,6 @@ import {
   checkRequirements,
   getStrengthColor,
 } from '@/lib/auth-utils';
-import { supabase } from '../api/supabaseClient'; 
-import { Link, useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  Circle,
-  Lock,
-  Mail,
-  ShieldCheck,
-  User,
-} from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,11 +15,24 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import { supabase } from '@/lib/supabase'; // Recommended path
+import { Link, useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Circle,
+  Lock,
+  Mail,
+  ShieldCheck,
+  User,
+} from 'lucide-react-native';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 
 /**
  * PROJECT CRADLE: ENHANCED HIGH-FIDELITY SIGN-UP
- * Optimized for: Instant login (Confirm Email OFF) and Automatic Baby Initialization.
+ * Optimized for: Explicit Sign-In redirection after successful registration.
  */
 export default function SignUp() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function SignUp() {
     try {
       /**
        * STEP 1: AUTH REGISTRATION
-       * Since Confirm Email is OFF, Supabase returns a session immediately.
+       * Create account with metadata. Redirecting to Sign-In afterward for cleaner state management.
        */
       const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -70,7 +70,8 @@ export default function SignUp() {
         options: {
           data: { 
             role: 'PRIMARY_PARENT', 
-            full_name: firstName.trim() 
+            full_name: firstName.trim(),
+            is_onboarded: false 
           },
         },
       });
@@ -78,27 +79,24 @@ export default function SignUp() {
       if (authError) throw authError;
 
       /**
-       * STEP 2: INITIALIZE BABY PROFILE
-       * Creating a default baby record so the Dashboard isn't empty on first load.
+       * SUCCESS STATE:
+       * Redirecting to Sign-In instead of auto-logging in.
        */
       if (data.user) {
-        const { error: babyError } = await supabase.from('babies').insert([{
-          parent_id: data.user.id,
-          name: `${firstName}'s Baby`,
-          dob: new Date().toISOString().split('T')[0], // Default to today
-        }]);
-
-        if (babyError) console.error("Initial Baby Setup Error:", babyError.message);
-
-        // STEP 3: MARK ONBOARDED
-        await supabase.from('profiles').update({ is_onboarded: true }).eq('id', data.user.id);
-        
-        // Final Redirection
-        router.replace('/(app)');
+        Alert.alert(
+          'Account Created',
+          'Your family core has been initialized. Please sign in to continue.',
+          [
+            { 
+              text: 'Sign In Now', 
+              onPress: () => router.replace('/(auth)/sign-in') 
+            }
+          ]
+        );
       }
 
     } catch (error: any) {
-      Alert.alert('Authentication Failed', error.message);
+      Alert.alert('Registration Failed', error.message);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,12 @@
+/**
+ * PROJECT CRADLE: BERRY AI ASSISTANT V2.0
+ * Path: components/ai/BerryAssistant.tsx
+ * * DESIGN SYSTEM:
+ * - Theme: Obsidian / Dark Mode Optimized
+ * - UI: Glassmorphism (using GlassCard)
+ * - Accessibility: Melatonin-safe (low blue-light profile)
+ */
+
 import React, { useState, useRef } from 'react';
 import { 
   View, 
@@ -7,13 +16,15 @@ import {
   ScrollView, 
   ActivityIndicator, 
   KeyboardAvoidingView, 
-  Platform 
+  Platform,
+  StyleSheet 
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Sparkles, Send, X, Bot } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInDown, FadeOut, SlideOutDown } from 'react-native-reanimated';
+
 import { supabase } from '@/lib/supabase';
-import { useBabyContext } from '@/hooks/useBabyContext';
+import { useAuth } from '@/context/auth';
+import { GlassCard } from '../glass/GlassCard'; // Correct relative path
 import { buildParentingPrompt } from '@/services/ai-prompt-builder';
 
 export const BerryAssistant = () => {
@@ -23,7 +34,7 @@ export const BerryAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const { data: baby } = useBabyContext();
+  const { profile } = useAuth(); // Using the synchronized Auth Context
 
   const handleAskBerry = async () => {
     if (!input.trim() || isLoading) return;
@@ -32,15 +43,21 @@ export const BerryAssistant = () => {
     setResponse(null);
 
     try {
-      // 1. Build the contextual prompt using our service
+      /**
+       * 1. CONTEXTUAL PROMPT GENERATION
+       * Passing baby name and age to the Edge Function for personalized advice.
+       */
       const prompt = buildParentingPrompt(
-        baby?.baby_name || 'Baby',
-        baby?.ageInMonths || 0,
-        [], // In production, pass the last 5-10 care_events here
+        profile?.baby_name || 'Baby',
+        0, // Age logic will be connected to your Growth module next
+        [], 
         input
       );
 
-      // 2. Call the Supabase Edge Function we deployed
+      /**
+       * 2. SECURE EDGE FUNCTION CALL
+       * Invoking the 'berry-ai' function with the contextual prompt.
+       */
       const { data, error } = await supabase.functions.invoke('berry-ai', {
         body: { prompt }
       });
@@ -49,108 +66,147 @@ export const BerryAssistant = () => {
       setResponse(data.text);
       setInput('');
     } catch (error: any) {
-      setResponse(`Sorry, I encountered an error: ${error.message}`);
+      setResponse(`I'm sorry, I'm having trouble connecting to the family core: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- FLOATING TRIGGER BUTTON ---
   if (!isOpen) {
     return (
-      <Animated.View entering={FadeIn} exiting={FadeOut}>
+      <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.fabContainer}>
         <TouchableOpacity 
           onPress={() => setIsOpen(true)}
           activeOpacity={0.9}
-          className="absolute items-center justify-center rounded-full shadow-2xl bottom-24 right-6 bg-primary w-14 h-14"
+          style={styles.fab}
         >
-          <Sparkles color="white" size={28} />
+          <Sparkles color="#020617" size={28} />
         </TouchableOpacity>
       </Animated.View>
     );
   }
 
+  // --- FULL CHAT INTERFACE ---
   return (
     <Animated.View 
       entering={SlideInDown} 
       exiting={SlideOutDown}
-      className="absolute inset-0 z-50 justify-end"
+      style={styles.overlay}
     >
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="justify-end flex-1 p-4"
+        style={styles.keyboardView}
       >
         <TouchableOpacity 
           activeOpacity={1} 
           onPress={() => setIsOpen(false)} 
-          className="absolute inset-0 bg-black/10" 
+          style={styles.backdrop} 
         />
         
-        <View className="h-[75%] rounded-4xl overflow-hidden border border-white/40 shadow-2xl">
-          <BlurView intensity={100} tint="light" className="flex-1">
+        <View style={styles.assistantContainer}>
+          <GlassCard variant="teal" intensity={30} className="flex-1 p-0">
             
-            {/* Header */}
-            <View className="flex-row items-center justify-between p-6 border-b border-neutral-100">
-              <View className="flex-row items-center">
-                <View className="p-2 rounded-xl bg-primary/10">
-                  <Bot size={24} color="#4FD1C7" />
+            {/* 1. Header Section */}
+            <View style={styles.header}>
+              <View style={styles.headerTitleRow}>
+                <View style={styles.botIconWrapper}>
+                  <Bot size={22} color="#4FD1C7" />
                 </View>
-                <Text className="ml-3 text-xl font-black text-neutral-900">Berry AI</Text>
+                <View>
+                  <Text style={styles.headerTitle}>Berry Assistant</Text>
+                  <Text style={styles.headerStatus}>AI PRO ACTIVE</Text>
+                </View>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)} hitSlop={20}>
-                <X size={24} color="#CBD5E0" />
+                <X size={24} color="#475569" />
               </TouchableOpacity>
             </View>
 
-            {/* Chat Body */}
+            {/* 2. Chat Ledger */}
             <ScrollView 
               ref={scrollViewRef}
-              className="flex-1 p-6"
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
-              <View className="p-5 mb-6 border bg-white/40 border-white/60 rounded-3xl">
-                <Text className="font-medium leading-6 text-neutral-700">
-                  Hi! I'm Berry. How can I help with {baby?.baby_name || 'your baby'}'s schedule or development today?
+              <View style={styles.welcomeBubble}>
+                <Text style={styles.welcomeText}>
+                  Hello! I'm Berry. How can I help optimize {profile?.baby_name || 'your baby'}'s schedule today?
                 </Text>
               </View>
 
               {response && (
-                <Animated.View entering={FadeIn} className="p-5 mb-6 border bg-primary/5 border-primary/20 rounded-3xl">
-                  <Text className="font-bold tracking-widest uppercase text-primary text-[10px] mb-2">Berry's Advice</Text>
-                  <Text className="leading-6 text-neutral-800">{response}</Text>
+                <Animated.View entering={FadeIn} style={styles.responseBubble}>
+                  <View style={styles.responseHeader}>
+                    <Sparkles size={12} color="#4FD1C7" />
+                    <Text style={styles.responseTextLabel}>BERRY'S INSIGHT</Text>
+                  </View>
+                  <Text style={styles.responseText}>{response}</Text>
                 </Animated.View>
               )}
 
               {isLoading && (
-                <View className="items-start mb-6">
-                  <ActivityIndicator color="#4FD1C7" />
+                <View style={styles.loadingArea}>
+                  <ActivityIndicator color="#4FD1C7" size="small" />
+                  <Text style={styles.loadingText}>Analyzing patterns...</Text>
                 </View>
               )}
             </ScrollView>
 
-            {/* Input Area */}
-            <View className="p-6 bg-white/20">
-              <View className="flex-row items-center px-4 py-3 bg-white border shadow-sm rounded-2xl border-neutral-200">
+            {/* 3. Input Interface */}
+            <View style={styles.inputSection}>
+              <View style={styles.inputWrapper}>
                 <TextInput 
-                  placeholder="Ask about sleep or feeding..." 
-                  className="flex-1 h-10 text-neutral-900"
+                  placeholder="Ask about sleep regression, feeding..." 
+                  placeholderTextColor="#475569"
+                  style={styles.textInput}
                   value={input}
                   onChangeText={setInput}
-                  multiline={false}
                   onSubmitEditing={handleAskBerry}
+                  editable={!isLoading}
                 />
                 <TouchableOpacity 
                   onPress={handleAskBerry}
-                  disabled={isLoading}
-                  className={`p-2 rounded-xl ${input.trim() ? 'bg-primary' : 'bg-neutral-200'}`}
+                  disabled={isLoading || !input.trim()}
+                  style={[styles.sendBtn, !input.trim() && { opacity: 0.3 }]}
                 >
-                  <Send size={18} color="white" />
+                  <Send size={18} color="#020617" />
                 </TouchableOpacity>
               </View>
             </View>
 
-          </BlurView>
+          </GlassCard>
         </View>
       </KeyboardAvoidingView>
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  fabContainer: { position: 'absolute', bottom: 100, right: 24, zIndex: 1000 },
+  fab: { backgroundColor: '#4FD1C7', width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', shadowColor: '#4FD1C7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 10 },
+  overlay: { position: 'absolute', inset: 0, zIndex: 10000, justifyContent: 'flex-end' },
+  keyboardView: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2, 6, 23, 0.6)' },
+  assistantContainer: { height: '80%', padding: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottomWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  botIconWrapper: { backgroundColor: 'rgba(79, 209, 199, 0.1)', padding: 10, borderRadius: 12 },
+  headerTitle: { color: '#FFF', fontSize: 18, fontWeight: '900' },
+  headerStatus: { color: '#4FD1C7', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  scrollArea: { flex: 1 },
+  scrollContent: { padding: 24 },
+  welcomeBubble: { backgroundColor: 'rgba(255, 255, 255, 0.03)', padding: 20, borderRadius: 24, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
+  welcomeText: { color: '#CBD5E0', fontSize: 15, lineHeight: 24, fontWeight: '600' },
+  responseBubble: { backgroundColor: 'rgba(79, 209, 199, 0.03)', padding: 20, borderRadius: 24, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(79, 209, 199, 0.1)' },
+  responseHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  responseTextLabel: { color: '#4FD1C7', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  responseText: { color: '#FFF', fontSize: 15, lineHeight: 24, fontWeight: '600' },
+  loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 10 },
+  loadingText: { color: '#475569', fontSize: 12, fontWeight: '700' },
+  inputSection: { padding: 24, borderTopWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 20, padding: 8, paddingLeft: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
+  textInput: { flex: 1, color: '#FFF', fontSize: 15, fontWeight: '600', height: 48 },
+  sendBtn: { backgroundColor: '#4FD1C7', width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }
+});

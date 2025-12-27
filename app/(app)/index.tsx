@@ -1,125 +1,382 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { Theme } from './shared/Theme';
-import { Milk, Moon, Activity, Zap, ChevronRight, Bot, Sparkles } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/context/auth';
-
 /**
- * PROJECT CRADLE: INTELLIGENCE HUB (V1.0)
- * Responsive Glassmorphism Grid for Feeding, Sleep, and Growth.
+ * PROJECT CRADLE: THE HUB (DASHBOARD) V8.0
+ * Path: app/(app)/index.tsx
+ * * DESIGN PRINCIPLES:
+ * - Hierarchy: AI Insights > Quick Tracking > Recent Activity.
+ * - Glassmorphism: High-fidelity transparency and depth.
+ * - Dynamic Data: Pulls directly from synchronized Auth context.
  */
-export default function DashboardHub() {
-  const { session } = useAuth();
-  const [babyName, setBabyName] = useState('Your Baby');
+
+import {
+  Activity,
+  ChevronRight,
+  Clock,
+  Milk,
+  Moon,
+  Plus,
+  Sparkles,
+  Zap,
+} from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+import { GlassCard } from '@/components/glass/GlassCard';
+import { useAuth } from '@/context/auth';
+import { supabase } from '@/lib/supabase';
+
+// --- TYPES ---
+interface QuickActionProps {
+  label: string;
+  icon: any;
+  color: string;
+  onPress: () => void;
+}
+
+export default function Dashboard() {
+  const { profile, user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+
+  const [lastActivity, setLastActivity] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // --- DYNAMIC IDENTITY RESOLUTION ---
+  // Fixes the hardcoding issue by using the real baby_name from your Supabase profile.
+  const babyName = profile?.baby_name || "Your Baby";
+  const isPremium = ['ADMIN', 'PREMIUM_MEMBER'].includes(profile?.role || '');
+
+  // Mocked for UI/UX demonstration - logic will be replaced by useSleepEngine hook
+  const sleepPrediction = {
+    nextNap: '10:45 AM',
+    awakeWindow: '2h 15m',
+    pressure: 68,
+  };
 
   useEffect(() => {
-    async function fetchBabyData() {
-      if (!session?.user?.id) return;
-      const { data } = await supabase.from('babies').select('name').single();
-      if (data?.name) setBabyName(data.name);
+    async function fetchLatestEvent() {
+      if (!user?.id) return;
+      
+      try {
+        const { data } = await supabase
+          .from('care_events')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (data) setLastActivity(data);
+      } catch (err) {
+        // Silent catch for initial empty states
+      } finally {
+        setLoading(false);
+      }
     }
-    fetchBabyData();
-  }, [session]);
+    fetchLatestEvent();
+  }, [user?.id]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.content,
+        isDesktop && styles.desktopPadding,
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 1. WELCOME SECTION (DYNAMIC) */}
+      <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
         <View>
-          <Text style={styles.greeting}>{babyName}'s Hub</Text>
-          <Text style={styles.subGreeting}>System Active • Real-time Monitoring</Text>
+          <Text style={styles.greeting}>Welcome Back,</Text>
+          <Text style={styles.babyName}>{babyName}</Text>
         </View>
-        <View style={styles.aiBadge}>
-          <Bot size={14} color={Theme.colors.secondary} />
-          <Text style={styles.aiText}>Berry AI Online</Text>
+        <View style={styles.syncStatus}>
+          <Activity size={14} color="#4FD1C7" />
+          <Text style={styles.syncText}>ENCRYPTED SYNC</Text>
         </View>
-      </View>
+      </Animated.View>
 
-      {/* QUICK LOG HERO: AAA Teal Glassmorphism */}
-      <TouchableOpacity style={styles.heroCard}>
-        <View style={styles.zapCircle}>
-          <Zap size={24} color="#020617" fill="#020617" />
-        </View>
-        <Text style={styles.heroText}>QUICK LOG RECENT FEED</Text>
-        <Sparkles size={20} color="rgba(2, 6, 23, 0.4)" />
-      </TouchableOpacity>
+      <View style={[styles.mainGrid, isDesktop && styles.desktopGrid]}>
+        
+        {/* 2. BERRY AI HUD (RBAC PROTECTED) */}
+        {isPremium && (
+          <Animated.View
+            entering={FadeInDown.delay(200).duration(800)}
+            style={styles.spanGrid}
+          >
+            <GlassCard variant="teal" className="border-primary/20">
+              <View style={styles.aiHeader}>
+                <View style={styles.aiLabelRow}>
+                  <Sparkles size={18} color="#4FD1C7" />
+                  <Text style={styles.aiTitle}>BERRY AI INSIGHT</Text>
+                </View>
+                <View style={styles.pressureBadge}>
+                  <Text style={styles.pressureText}>
+                    {sleepPrediction.pressure}% SLEEP PRESSURE
+                  </Text>
+                </View>
+              </View>
 
-      {/* INTELLIGENCE GRID: Responsive Columns */}
-      <View style={styles.grid}>
-        <GlassCard 
-          icon={Milk} 
-          label="Last Feed" 
-          value="2h 14m ago" 
-          sub="Breast milk • 120ml" 
-          color={Theme.colors.primary} 
-        />
-        <GlassCard 
-          icon={Moon} 
-          label="Current Sleep" 
-          value="Active" 
-          sub="Duration: 45m" 
-          color={Theme.colors.secondary} 
-        />
-        <GlassCard 
-          icon={Activity} 
-          label="Growth" 
-          value="7.2 kg" 
-          sub="92nd Percentile" 
-          color={Theme.colors.success} 
-        />
-      </View>
-      
-      {/* BERRY AI PREDICTION: Dynamic Insights */}
-      <View style={styles.insightCard}>
-        <View style={styles.insightHeader}>
-          <Bot size={18} color={Theme.colors.secondary} />
-          <Text style={styles.insightTitle}>BERRY AI PREDICTION</Text>
+              <View style={styles.predictionRow}>
+                <View>
+                  <Text style={styles.predictionLabel}>PREDICTED NEXT NAP</Text>
+                  <Text style={styles.predictionTime}>
+                    {sleepPrediction.nextNap}
+                  </Text>
+                </View>
+                <View style={styles.verticalDivider} />
+                <View>
+                  <Text style={styles.predictionLabel}>AWAKE WINDOW</Text>
+                  <Text style={styles.predictionValue}>
+                    {sleepPrediction.awakeWindow}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.aiActionBtn}>
+                <Text style={styles.aiActionText}>VIEW OPTIMIZED SCHEDULE</Text>
+                <ChevronRight size={14} color="#020617" />
+              </TouchableOpacity>
+            </GlassCard>
+          </Animated.View>
+        )}
+
+        {/* 3. QUICK LOG ACTIONS */}
+        <View style={[styles.section, { width: isDesktop ? '45%' : '100%' }]}>
+          <Text style={styles.sectionTitle}>QUICK LOG</Text>
+          <View style={styles.actionsRow}>
+            <QuickAction
+              label="Feed"
+              icon={Milk}
+              color="#4FD1C7"
+              onPress={() => {}}
+            />
+            <QuickAction
+              label="Sleep"
+              icon={Moon}
+              color="#B794F6"
+              onPress={() => {}}
+            />
+            <QuickAction
+              label="Diaper"
+              icon={Plus}
+              color="#9AE6B4"
+              onPress={() => {}}
+            />
+          </View>
         </View>
-        <Text style={styles.insightBody}>
-          Based on today's activity, your baby's next "SweetSpot" for sleep is in **15 minutes**. Prepare the crib for a high-quality nap.
-        </Text>
-        <TouchableOpacity style={styles.insightBtn}>
-          <Text style={styles.insightBtnText}>VIEW OPTIMIZED SCHEDULE</Text>
-          <ChevronRight size={16} color={Theme.colors.secondary} />
-        </TouchableOpacity>
+
+        {/* 4. RECENT ACTIVITY TIMELINE */}
+        <View style={[styles.section, { flex: 1 }]}>
+          <View style={styles.ledgerHeader}>
+            <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAll}>TIMELINE</Text>
+            </TouchableOpacity>
+          </View>
+
+          <GlassCard className="p-0 overflow-hidden">
+            {loading ? (
+              <View style={styles.emptyState}><ActivityIndicator color="#4FD1C7" /></View>
+            ) : lastActivity ? (
+              <TouchableOpacity style={styles.activityItem}>
+                <View style={styles.activityIconWrapper}>
+                  <Zap size={18} color="#4FD1C7" />
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityType}>
+                    {lastActivity.event_type}
+                  </Text>
+                  <Text style={styles.activityMeta}>
+                    {new Date(lastActivity.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color="#475569" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emptyState}>
+                <Clock size={24} color="#475569" />
+                <Text style={styles.emptyText}>No events logged for {babyName}.</Text>
+              </View>
+            )}
+          </GlassCard>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-// Internal High-Fidelity Component
-const GlassCard = ({ icon: Icon, label, value, sub, color }: any) => (
-  <TouchableOpacity style={styles.card}>
-    <View style={[styles.iconCircle, { backgroundColor: `${color}15` }]}>
-      <Icon size={20} color={color} />
+// --- SUB-COMPONENTS ---
+const QuickAction = ({
+  label,
+  icon: Icon,
+  color,
+  onPress,
+}: QuickActionProps) => (
+  <TouchableOpacity onPress={onPress} style={styles.actionBtn}>
+    <View style={[styles.actionIconWrapper, { borderColor: `${color}40` }]}>
+      <Icon size={24} color={color} />
     </View>
-    <Text style={styles.cardLabel}>{label}</Text>
-    <Text style={styles.cardValue}>{value}</Text>
-    <Text style={styles.cardSub}>{sub}</Text>
+    <Text style={styles.actionLabel}>{label}</Text>
   </TouchableOpacity>
 );
 
+// --- STYLES ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617' },
-  content: { padding: 24, maxWidth: 1200, alignSelf: 'center', width: '100%' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
-  greeting: { color: '#FFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
-  subGreeting: { color: '#94A3B8', fontSize: 12, fontWeight: '600', marginTop: 4 },
-  aiBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(183, 148, 246, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(183, 148, 246, 0.2)' },
-  aiText: { color: '#B794F6', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  heroCard: { backgroundColor: '#4FD1C7', padding: 24, borderRadius: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, elevation: 10, shadowColor: '#4FD1C7', shadowOpacity: 0.3, shadowRadius: 20 },
-  zapCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(2, 6, 23, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  heroText: { color: '#020617', fontWeight: '900', letterSpacing: 1.5, fontSize: 14 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  card: { flex: 1, minWidth: Platform.OS === 'web' ? 250 : '45%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 28, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  iconCircle: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  cardLabel: { color: '#94A3B8', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
-  cardValue: { color: '#FFF', fontSize: 20, fontWeight: '800', marginVertical: 8 },
-  cardSub: { color: '#475569', fontSize: 12, fontWeight: '600' },
-  insightCard: { marginTop: 24, backgroundColor: 'rgba(183, 148, 246, 0.04)', borderRadius: 32, padding: 28, borderWidth: 1, borderColor: 'rgba(183, 148, 246, 0.15)' },
-  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  insightTitle: { color: '#B794F6', fontSize: 11, fontWeight: '900', letterSpacing: 2 },
-  insightBody: { color: '#F7FAFC', fontSize: 16, lineHeight: 24, fontWeight: '500' },
-  insightBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20 },
-  insightBtnText: { color: '#B794F6', fontSize: 12, fontWeight: '900', letterSpacing: 1 }
+  root: { flex: 1, backgroundColor: '#020617' },
+  content: { padding: 24, paddingBottom: 120 },
+  desktopPadding: { padding: 48 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 40,
+  },
+  greeting: { color: '#94A3B8', fontSize: 14, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  babyName: {
+    color: '#FFF',
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: -1.5,
+    marginTop: 4,
+  },
+  syncStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(79, 209, 199, 0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.1)',
+  },
+  syncText: {
+    color: '#4FD1C7',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  mainGrid: { gap: 32 },
+  desktopGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  spanGrid: { width: '100%' },
+  section: { gap: 16 },
+  sectionTitle: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  aiLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aiTitle: {
+    color: '#4FD1C7',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  pressureBadge: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  pressureText: { color: '#94A3B8', fontSize: 9, fontWeight: '800' },
+  predictionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 40,
+    marginBottom: 24,
+  },
+  predictionLabel: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  predictionTime: { color: '#FFF', fontSize: 32, fontWeight: '900' },
+  predictionValue: { color: '#FFF', fontSize: 24, fontWeight: '800' },
+  verticalDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  aiActionBtn: {
+    backgroundColor: '#4FD1C7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 16,
+    gap: 10,
+  },
+  aiActionText: {
+    color: '#020617',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  actionsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  actionBtn: { alignItems: 'center', gap: 12 },
+  actionIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionLabel: { color: '#94A3B8', fontSize: 13, fontWeight: '700' },
+  ledgerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  viewAll: { color: '#4FD1C7', fontSize: 11, fontWeight: '900' },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    gap: 16,
+  },
+  activityIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(79, 209, 199, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityInfo: { flex: 1 },
+  activityType: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  activityMeta: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  emptyState: { padding: 40, alignItems: 'center', gap: 12 },
+  emptyText: { color: '#475569', fontWeight: '700', fontSize: 13 },
 });

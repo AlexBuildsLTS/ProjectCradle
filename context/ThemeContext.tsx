@@ -1,4 +1,4 @@
-import { Theme } from '@/app/(app)/shared/Theme';
+import { Theme } from '@/lib/shared/Theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';

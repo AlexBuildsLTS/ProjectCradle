@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
 import { GlassCard } from '@/components/glass/GlassCard';
 import { useBiometrics } from '@/hooks/useBiometrics';
-import { Utensils, Droplets, Plus, ChevronRight } from 'lucide-react-native';
-import { Theme } from './shared/Theme';
+import { ChevronRight, Droplets, Plus, Utensils } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Theme } from '../../lib/shared/Theme';
 
 /**
  * PROJECT CRADLE: OBSIDIAN FEEDING LEDGER
@@ -15,9 +21,9 @@ export default function FeedingScreen() {
   const [side, setSide] = useState<'LEFT' | 'RIGHT' | 'BOTH'>('BOTH');
 
   return (
-    <ScrollView 
+    <ScrollView
       style={{ backgroundColor: Theme.colors.background }} // FIXED: Enforce Obsidian
-      className="flex-1 p-6" 
+      className="flex-1 p-6"
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       <Text className="mb-6 text-3xl font-black text-white">Feeding</Text>
@@ -40,9 +46,7 @@ export default function FeedingScreen() {
             onChangeText={setAmount}
             className="flex-1 p-4 text-lg text-white border bg-white/5 border-white/10 rounded-2xl"
           />
-          <TouchableOpacity 
-            className="p-4 shadow-lg bg-primary rounded-2xl shadow-primary/20"
-          >
+          <TouchableOpacity className="p-4 shadow-lg bg-primary rounded-2xl shadow-primary/20">
             <Plus color="#020617" size={24} />
           </TouchableOpacity>
         </View>
@@ -51,14 +55,20 @@ export default function FeedingScreen() {
       {/* Nursing Selection: Obsidian Style */}
       <View className="flex-row mb-6 space-x-4">
         {(['LEFT', 'RIGHT'] as const).map((s) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={s}
             onPress={() => setSide(s)}
             className={`flex-1 p-4 rounded-3xl border transition-all ${
-              side === s ? 'bg-secondary/10 border-secondary' : 'bg-white/5 border-white/5'
+              side === s
+                ? 'bg-secondary/10 border-secondary'
+                : 'bg-white/5 border-white/5'
             }`}
           >
-            <Text className={`text-center font-bold ${side === s ? 'text-secondary' : 'text-neutral-500'}`}>
+            <Text
+              className={`text-center font-bold ${
+                side === s ? 'text-secondary' : 'text-neutral-500'
+              }`}
+            >
               {s} Side
             </Text>
           </TouchableOpacity>
@@ -66,7 +76,9 @@ export default function FeedingScreen() {
       </View>
 
       {/* Solids Introduction: Glassmorphic Row */}
-      <Text className="mb-4 text-xl font-bold text-white">Solids Introduction</Text>
+      <Text className="mb-4 text-xl font-bold text-white">
+        Solids Introduction
+      </Text>
       <TouchableOpacity className="flex-row items-center justify-between p-5 mb-3 border bg-white/5 border-white/10 rounded-3xl">
         <View className="flex-row items-center">
           <View className="p-2 bg-white/5 rounded-xl">
@@ -74,7 +86,9 @@ export default function FeedingScreen() {
           </View>
           <View className="ml-3">
             <Text className="font-bold text-white">Avocado Puree</Text>
-            <Text className="text-xs text-neutral-500">No reactions recorded</Text>
+            <Text className="text-xs text-neutral-500">
+              No reactions recorded
+            </Text>
           </View>
         </View>
         <ChevronRight size={20} color="#475569" />

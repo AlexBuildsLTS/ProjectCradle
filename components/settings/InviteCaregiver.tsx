@@ -1,25 +1,24 @@
-import { Theme } from "@/app/(app)/shared/Theme";
-import { GlassCard } from "@/components/glass/GlassCard";
-import * as Clipboard from "expo-clipboard"; // Ensure this matches exactly
-import { Copy, Share2, UserPlus } from "lucide-react-native";
-import React, { useState } from "react";
-import { Alert, Share, Text, TouchableOpacity, View } from "react-native";
-
+import { GlassCard } from '@/components/glass/GlassCard';
+import { Theme } from '@/lib/shared/Theme';
+import * as Clipboard from 'expo-clipboard'; // Ensure this matches exactly
+import { Copy, Share2, UserPlus } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Alert, Share, Text, TouchableOpacity, View } from 'react-native';
 
 /**
  * PROJECT CRADLE: CAREGIVER INVITE SYSTEM
  * Features: Secure Code Generation, Clipboard Integration, AAA UI
  */
 export const InviteCaregiver = () => {
-  const [inviteCode, setInviteCode] = useState("CRDL-8829");
+  const [inviteCode, setInviteCode] = useState('CRDL-8829');
 
   const copyToClipboard = async () => {
     try {
       await Clipboard.setStringAsync(inviteCode);
       triggerLightImpact();
-      Alert.alert("Success", "Invite code copied to clipboard!");
+      Alert.alert('Success', 'Invite code copied to clipboard!');
     } catch (err) {
-      console.error("Clipboard failure", err);
+      console.error('Clipboard failure', err);
     }
   };
 
@@ -71,6 +70,5 @@ export const InviteCaregiver = () => {
   );
 };
 function triggerLightImpact() {
-  throw new Error("Function not implemented.");
+  throw new Error('Function not implemented.');
 }
-

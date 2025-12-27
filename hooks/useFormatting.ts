@@ -1,5 +1,5 @@
-import { formatTemperature, formatVolume } from "../app/(app)/shared/Formatting";
-import { useBabyContext } from "./useBabyContext";
+import { formatTemperature, formatVolume } from '../lib/shared/Formatting';
+import { useBabyContext } from './useBabyContext';
 
 /**
  * PROJECT CRADLE: UNIVERSAL FORMATTING HOOK
@@ -8,7 +8,7 @@ import { useBabyContext } from "./useBabyContext";
 export const useFormatting = () => {
   const { data: baby } = useBabyContext();
 
-  const isMetric = baby?.unit_preference !== "IMPERIAL";
+  const isMetric = baby?.unit_preference !== 'IMPERIAL';
 
   const displayTemp = (celsiusValue: string) => {
     return formatTemperature(celsiusValue, !isMetric);
@@ -23,9 +23,9 @@ export const useFormatting = () => {
     displayVolume,
     isMetric,
     units: {
-      temp: isMetric ? "°C" : "°F",
-      volume: isMetric ? "ml" : "oz",
-      weight: isMetric ? "kg" : "lb",
+      temp: isMetric ? '°C' : '°F',
+      volume: isMetric ? 'ml' : 'oz',
+      weight: isMetric ? 'kg' : 'lb',
     },
   };
 };
