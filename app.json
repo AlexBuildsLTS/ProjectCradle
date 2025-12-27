@@ -18,7 +18,10 @@
       "bundleIdentifier": "com.yourname.projectcradle",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow ProjectCradle to access your photos to save baby milestones.",
-        "NSCameraUsageDescription": "Allow ProjectCradle to use the camera to capture memories."
+        "NSCameraUsageDescription": "Allow ProjectCradle to use the camera to capture memories.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -44,6 +47,7 @@
       "expo-router",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
+      "expo-notifications",
       [
         "expo-image-picker",
         {

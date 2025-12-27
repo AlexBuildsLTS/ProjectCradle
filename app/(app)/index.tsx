@@ -1,10 +1,11 @@
 /**
- * PROJECT CRADLE: THE HUB (DASHBOARD) V8.0
+ * PROJECT CRADLE: THE HUB (DASHBOARD) V9.1 (STABILITY PATCH)
  * Path: app/(app)/index.tsx
- * * DESIGN PRINCIPLES:
- * - Hierarchy: AI Insights > Quick Tracking > Recent Activity.
- * - Glassmorphism: High-fidelity transparency and depth.
- * - Dynamic Data: Pulls directly from synchronized Auth context.
+ * * FEATURES:
+ * - Desktop Optimization: Max-width constraint (1280px) with centered alignment.
+ * - Grid Refinement: Side-by-side layout for logs and activity on desktop viewport.
+ * - RBAC Protection: Premium-only Berry AI Insight header.
+ * - Dynamic Ledger: Real-time synchronization with care_events core.
  */
 
 import {
@@ -20,7 +21,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -51,11 +51,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC IDENTITY RESOLUTION ---
-  // Fixes the hardcoding issue by using the real baby_name from your Supabase profile.
-  const babyName = profile?.baby_name || "Your Baby";
+  const babyName = profile?.baby_name || 'Your Baby';
   const isPremium = ['ADMIN', 'PREMIUM_MEMBER'].includes(profile?.role || '');
 
-  // Mocked for UI/UX demonstration - logic will be replaced by useSleepEngine hook
+  // Mocked for UI/UX demonstration - logic will be replaced by sleep engine hooks
   const sleepPrediction = {
     nextNap: '10:45 AM',
     awakeWindow: '2h 15m',
@@ -65,7 +64,6 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchLatestEvent() {
       if (!user?.id) return;
-      
       try {
         const { data } = await supabase
           .from('care_events')
@@ -74,7 +72,6 @@ export default function Dashboard() {
           .order('timestamp', { ascending: false })
           .limit(1)
           .single();
-        
         if (data) setLastActivity(data);
       } catch (err) {
         // Silent catch for initial empty states
@@ -88,31 +85,31 @@ export default function Dashboard() {
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={[
-        styles.content,
-        isDesktop && styles.desktopPadding,
-      ]}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. WELCOME SECTION (DYNAMIC) */}
-      <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome Back,</Text>
-          <Text style={styles.babyName}>{babyName}</Text>
-        </View>
-        <View style={styles.syncStatus}>
-          <Activity size={14} color="#4FD1C7" />
-          <Text style={styles.syncText}>ENCRYPTED SYNC</Text>
-        </View>
-      </Animated.View>
+      {/* MAX-WIDTH CONTAINER: Prevents elements from stretching on desktop */}
+      <View style={[styles.container, isDesktop && styles.desktopMaxWidth]}>
+        {/* 1. WELCOME SECTION */}
+        <Animated.View
+          entering={FadeInDown.duration(600)}
+          style={styles.header}
+        >
+          <View>
+            <Text style={styles.greeting}>Welcome Back,</Text>
+            <Text style={styles.babyName}>{babyName}</Text>
+          </View>
+          <View style={styles.syncStatus}>
+            <Activity size={14} color="#4FD1C7" />
+            <Text style={styles.syncText}>ENCRYPTED SYNC</Text>
+          </View>
+        </Animated.View>
 
-      <View style={[styles.mainGrid, isDesktop && styles.desktopGrid]}>
-        
-        {/* 2. BERRY AI HUD (RBAC PROTECTED) */}
+        {/* 2. BERRY AI HUD (FULL WIDTH ON ALL TIERS) */}
         {isPremium && (
           <Animated.View
             entering={FadeInDown.delay(200).duration(800)}
-            style={styles.spanGrid}
+            style={styles.aiWrapper}
           >
             <GlassCard variant="teal" className="border-primary/20">
               <View style={styles.aiHeader}>
@@ -128,14 +125,14 @@ export default function Dashboard() {
               </View>
 
               <View style={styles.predictionRow}>
-                <View>
+                <View style={styles.stat}>
                   <Text style={styles.predictionLabel}>PREDICTED NEXT NAP</Text>
                   <Text style={styles.predictionTime}>
                     {sleepPrediction.nextNap}
                   </Text>
                 </View>
                 <View style={styles.verticalDivider} />
-                <View>
+                <View style={styles.stat}>
                   <Text style={styles.predictionLabel}>AWAKE WINDOW</Text>
                   <Text style={styles.predictionValue}>
                     {sleepPrediction.awakeWindow}
@@ -151,75 +148,81 @@ export default function Dashboard() {
           </Animated.View>
         )}
 
-        {/* 3. QUICK LOG ACTIONS */}
-        <View style={[styles.section, { width: isDesktop ? '45%' : '100%' }]}>
-          <Text style={styles.sectionTitle}>QUICK LOG</Text>
-          <View style={styles.actionsRow}>
-            <QuickAction
-              label="Feed"
-              icon={Milk}
-              color="#4FD1C7"
-              onPress={() => {}}
-            />
-            <QuickAction
-              label="Sleep"
-              icon={Moon}
-              color="#B794F6"
-              onPress={() => {}}
-            />
-            <QuickAction
-              label="Diaper"
-              icon={Plus}
-              color="#9AE6B4"
-              onPress={() => {}}
-            />
-          </View>
-        </View>
-
-        {/* 4. RECENT ACTIVITY TIMELINE */}
-        <View style={[styles.section, { flex: 1 }]}>
-          <View style={styles.ledgerHeader}>
-            <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAll}>TIMELINE</Text>
-            </TouchableOpacity>
+        {/* 3. RESPONSIVE GRID: Stacks on mobile, Side-by-side on desktop */}
+        <View style={[styles.gridRow, isDesktop && styles.desktopRow]}>
+          {/* QUICK LOGS COLUMN */}
+          <View style={[styles.column, isDesktop && { flex: 0.4 }]}>
+            <Text style={styles.sectionTitle}>QUICK LOG</Text>
+            <View style={styles.actionsRow}>
+              <QuickAction
+                label="Feed"
+                icon={Milk}
+                color="#4FD1C7"
+                onPress={() => {}}
+              />
+              <QuickAction
+                label="Sleep"
+                icon={Moon}
+                color="#B794F6"
+                onPress={() => {}}
+              />
+              <QuickAction
+                label="Diaper"
+                icon={Plus}
+                color="#9AE6B4"
+                onPress={() => {}}
+              />
+            </View>
           </View>
 
-          <GlassCard className="p-0 overflow-hidden">
-            {loading ? (
-              <View style={styles.emptyState}><ActivityIndicator color="#4FD1C7" /></View>
-            ) : lastActivity ? (
-              <TouchableOpacity style={styles.activityItem}>
-                <View style={styles.activityIconWrapper}>
-                  <Zap size={18} color="#4FD1C7" />
-                </View>
-                <View style={styles.activityInfo}>
-                  <Text style={styles.activityType}>
-                    {lastActivity.event_type}
-                  </Text>
-                  <Text style={styles.activityMeta}>
-                    {new Date(lastActivity.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </View>
-                <ChevronRight size={16} color="#475569" />
+          {/* RECENT ACTIVITY COLUMN */}
+          <View style={[styles.column, isDesktop && { flex: 0.6 }]}>
+            <View style={styles.ledgerHeader}>
+              <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
+              <TouchableOpacity>
+                <Text style={styles.viewAll}>TIMELINE</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={styles.emptyState}>
-                <Clock size={24} color="#475569" />
-                <Text style={styles.emptyText}>No events logged for {babyName}.</Text>
-              </View>
-            )}
-          </GlassCard>
+            </View>
+
+            <GlassCard className="p-0 overflow-hidden">
+              {loading ? (
+                <View style={styles.emptyState}>
+                  <ActivityIndicator color="#4FD1C7" />
+                </View>
+              ) : lastActivity ? (
+                <TouchableOpacity style={styles.activityItem}>
+                  <View style={styles.activityIconWrapper}>
+                    <Zap size={18} color="#4FD1C7" />
+                  </View>
+                  <View style={styles.activityInfo}>
+                    <Text style={styles.activityType}>
+                      {lastActivity.event_type}
+                    </Text>
+                    <Text style={styles.activityMeta}>
+                      {new Date(lastActivity.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#475569" />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Clock size={24} color="#475569" />
+                  <Text style={styles.emptyText}>
+                    No events logged for {babyName}.
+                  </Text>
+                </View>
+              )}
+            </GlassCard>
+          </View>
         </View>
       </View>
     </ScrollView>
   );
 }
 
-// --- SUB-COMPONENTS ---
 const QuickAction = ({
   label,
   icon: Icon,
@@ -234,18 +237,25 @@ const QuickAction = ({
   </TouchableOpacity>
 );
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
-  content: { padding: 24, paddingBottom: 120 },
-  desktopPadding: { padding: 48 },
+  scrollContent: { alignItems: 'center', paddingBottom: 120 },
+  container: { width: '100%', padding: 24 },
+  // Constrains width on large screens to maintain readability
+  desktopMaxWidth: { maxWidth: 1280, padding: 48 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 40,
   },
-  greeting: { color: '#94A3B8', fontSize: 14, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  greeting: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
   babyName: {
     color: '#FFF',
     fontSize: 42,
@@ -270,19 +280,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
-  mainGrid: { gap: 32 },
-  desktopGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  spanGrid: { width: '100%' },
-  section: { gap: 16 },
-  sectionTitle: {
-    color: '#475569',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
+  aiWrapper: { marginBottom: 32, width: '100%' },
   aiHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -309,6 +307,7 @@ const styles = StyleSheet.create({
     gap: 40,
     marginBottom: 24,
   },
+  stat: { flexShrink: 1 },
   predictionLabel: {
     color: '#475569',
     fontSize: 10,
@@ -320,7 +319,7 @@ const styles = StyleSheet.create({
   verticalDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   aiActionBtn: {
     backgroundColor: '#4FD1C7',
@@ -337,11 +336,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
   },
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  actionBtn: { alignItems: 'center', gap: 12 },
+  gridRow: { gap: 32 },
+  // Side-by-side alignment logic for desktop
+  desktopRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  column: { gap: 16 },
+  sectionTitle: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  actionBtn: { flex: 1, alignItems: 'center', gap: 12 },
   actionIconWrapper: {
-    width: 64,
-    height: 64,
+    width: '100%',
+    aspectRatio: 1,
+    maxWidth: 80,
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderWidth: 1,
