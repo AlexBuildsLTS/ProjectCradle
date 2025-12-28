@@ -1,70 +1,166 @@
+/**
+ * PROJECT CRADLE: AI MILESTONE ENGINE V2.0 (AAA+ FINAL)
+ * Path: components/analytics/MilestoneChecklist.tsx
+ * FIXES: Handshakes with public.milestones and implements Pro-Row UI.
+ */
+
 import { GlassCard } from '@/components/glass/GlassCard';
-import { Theme } from '@/lib/shared/Theme';
+import { useAuth } from '@/context/auth';
+import { useFamily } from '@/context/family';
+import { supabase } from '@/lib/supabase';
 import { BrainCircuit, CheckCircle2, Circle } from 'lucide-react-native';
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Badge } from '../ui/Badge';
 
-const MILESTONES = [
-  { id: 1, title: 'Rolling Over', status: 'completed', age: '4m' },
-  { id: 2, title: 'Pushing up on arms', status: 'pending', age: '4m' },
-  { id: 3, title: 'Grasping toys', status: 'completed', age: '4m' },
+const TRACKED_MILESTONES = [
+  { key: 'rolling_over', label: 'Rolling Over', age: '4m' },
+  { key: 'pushing_up', label: 'Pushing up on arms', age: '4m' },
+  { key: 'grasping', label: 'Grasping toys', age: '4m' },
 ];
 
-/**
- * PROJECT CRADLE: AI MILESTONE ENGINE
- * Tracks physical development with AI-contextualized advice
- */
 export const MilestoneChecklist = () => {
+  const { selectedBaby } = useFamily();
+  const { user } = useAuth();
+  const [completedKeys, setCompletedKeys] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMilestones() {
+      if (!selectedBaby?.id) return;
+      const { data } = await supabase
+        .from('milestones')
+        .select('milestone_key')
+        .eq('baby_id', selectedBaby.id);
+
+      if (data) setCompletedKeys(data.map((m) => m.milestone_key));
+      setLoading(false);
+    }
+    fetchMilestones();
+  }, [selectedBaby]);
+
+  const toggleMilestone = async (key: string) => {
+    if (completedKeys.includes(key)) return; // Already locked in biometric core
+
+    try {
+      const { error } = await supabase.from('milestones').insert([
+        {
+          baby_id: selectedBaby?.id,
+          user_id: user?.id,
+          milestone_key: key,
+        },
+      ]);
+      if (!error) setCompletedKeys([...completedKeys, key]);
+    } catch (err) {
+      console.error('Biometric Sync Failure');
+    }
+  };
+
+  if (loading) return <ActivityIndicator color="#4FD1C7" />;
+
   return (
-    <View className="mt-10">
-      <View className="flex-row items-center justify-between px-1 mb-4">
-        <Text className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">
-          Developmental Milestones
+    <View style={{ marginTop: 32 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          paddingHorizontal: 4,
+        }}
+      >
+        <Text
+          style={{
+            color: '#475569',
+            fontWeight: '900',
+            fontSize: 10,
+            letterSpacing: 2,
+          }}
+        >
+          DEVELOPMENTAL CORE
         </Text>
-        <Badge label="4 Month Stage" variant="lavender" />
+        <Badge label="4 MONTH STAGE" variant="secondary" />
       </View>
 
-      <GlassCard className="mb-6">
-        {MILESTONES.map((m, i) => (
-          <TouchableOpacity
-            key={m.id}
-            className={`flex-row items-center justify-between py-4 ${
-              i !== MILESTONES.length - 1 ? 'border-b border-white/5' : ''
-            }`}
-          >
-            <View className="flex-row items-center">
-              {m.status === 'completed' ? (
-                <CheckCircle2 size={20} color={Theme.colors.primary} />
-              ) : (
-                <Circle size={20} color="#475569" />
-              )}
+      <GlassCard style={{ marginBottom: 24, padding: 0 }}>
+        {TRACKED_MILESTONES.map((m, i) => {
+          const isDone = completedKeys.includes(m.key);
+          return (
+            <TouchableOpacity
+              key={m.key}
+              onPress={() => toggleMilestone(m.key)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 20,
+                borderBottomWidth: i !== TRACKED_MILESTONES.length - 1 ? 1 : 0,
+                borderBottomColor: 'rgba(255,255,255,0.05)',
+              }}
+            >
+              <View style={{ width: 44, alignItems: 'flex-start' }}>
+                {isDone ? (
+                  <CheckCircle2 size={22} color="#4FD1C7" />
+                ) : (
+                  <Circle size={22} color="#334155" />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontWeight: '800',
+                    color: isDone ? '#FFF' : '#64748B',
+                    fontSize: 14,
+                  }}
+                >
+                  {m.label}
+                </Text>
+              </View>
               <Text
-                className={`ml-4 font-bold ${
-                  m.status === 'completed' ? 'text-white' : 'text-neutral-500'
-                }`}
+                style={{ fontSize: 10, fontWeight: '900', color: '#334155' }}
               >
-                {m.title}
+                {m.age}
               </Text>
-            </View>
-            <Text className="text-[10px] font-black text-neutral-600 uppercase tracking-tighter">
-              {m.age}
-            </Text>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </GlassCard>
 
-      {/* AI Milestone Advice */}
-      <GlassCard className="border-primary/20 bg-primary/5">
-        <View className="flex-row items-center mb-3">
-          <BrainCircuit size={18} color={Theme.colors.primary} />
-          <Text className="text-primary font-black ml-3 uppercase tracking-widest text-[10px]">
-            Berry AI Activity Suggestion
+      <GlassCard
+        style={{
+          borderColor: 'rgba(79, 209, 199, 0.2)',
+          backgroundColor: 'rgba(79, 209, 199, 0.05)',
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 12,
+          }}
+        >
+          <BrainCircuit size={18} color="#4FD1C7" />
+          <Text
+            style={{
+              color: '#4FD1C7',
+              fontWeight: '900',
+              marginLeft: 12,
+              fontSize: 10,
+              letterSpacing: 1.5,
+            }}
+          >
+            BERRY AI ADVICE
           </Text>
         </View>
-        <Text className="text-sm leading-6 text-white">
-          To encourage "Pushing up on arms," try 5-minute Tummy Time sessions
-          twice daily. Use a high-contrast mirror to keep interest.
+        <Text
+          style={{
+            fontSize: 13,
+            lineHeight: 22,
+            color: '#FFF',
+            fontWeight: '600',
+          }}
+        >
+          Trajectory suggests introducing high-contrast tummy time mats to
+          accelerate "Pushing up on arms."
         </Text>
       </GlassCard>
     </View>
