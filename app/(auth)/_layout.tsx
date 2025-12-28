@@ -1,28 +1,52 @@
-import React from 'react';
-import { Stack } from "expo-router";
-import { View, Text, useWindowDimensions, Platform, ScrollView, StyleSheet } from "react-native";
-import Animated, { FadeInLeft } from "react-native-reanimated";
-import AuthMarketing from "./AuthMarketing"; 
-import AuthFooter from './AuthFooter';
-
 /**
- * PROJECT CRADLE: CORE AUTH ARCHITECTURE
- * Fixed: 60/40 Desktop Split | Vertical Stack Mobile | No White Squares
+ * PROJECT CRADLE: AUTH LAYOUT V4.0 - AAA+ QUALITY
+ * Path: app/(auth)/_layout.tsx
+ * FEATURES:
+ * - Optimized spacing and form visibility
+ * - Premium desktop/mobile responsive design
+ * - Smooth animations and transitions
+ * - Perfect glassmorphism integration
+ * - Professional marketing section layout
  */
+
+import { Stack } from 'expo-router';
+import React from 'react';
+import {
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, { FadeInLeft, FadeInUp } from 'react-native-reanimated';
+import AuthMarketing from './AuthMarketing';
+
 export default function AuthLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 1024;
 
   return (
-    <View style={[styles.root, { backgroundColor: '#3333FF' }]}>
+    <View style={styles.root}>
       <View style={{ flexDirection: isDesktop ? 'row' : 'column', flex: 1 }}>
-        
-        {/* LEFT PANE (60% Desktop): Marketing Content */}
+        {/* DESKTOP BRANDING */}
+        {isDesktop && (
+          <View style={styles.iconAnchor}>
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={styles.desktopIcon}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
+        {/* MARKETING PANE (60% DESKTOP) */}
         {isDesktop && (
           <View style={styles.desktopLeftPane}>
-            <ScrollView 
-              showsVerticalScrollIndicator={false} 
-              contentContainerStyle={{ padding: 80 }}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.marketingScroll}
             >
               <Animated.View entering={FadeInLeft.duration(1000)}>
                 <AuthMarketing isDesktop={true} />
@@ -31,40 +55,50 @@ export default function AuthLayout() {
           </View>
         )}
 
-        {/* RIGHT PANE (40% Desktop / 100% Mobile): Auth Form */}
+        {/* AUTH FORM PANE (40% DESKTOP) */}
         <View style={styles.authPane}>
-          <ScrollView 
-            contentContainerStyle={styles.authScrollContent} 
+          <ScrollView
+            contentContainerStyle={styles.authScrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.authConstraint}>
               {!isDesktop && (
                 <View style={styles.mobileHeader}>
-                  <Text style={styles.mobileTitle}>Project Cradle</Text>
+                  <Image
+                    source={require('../../assets/images/icon.png')}
+                    style={styles.mobileIcon}
+                  />
+                  <Text style={styles.mobileTitle}>Cradle</Text>
                 </View>
               )}
 
-              {/* STACK: Glass Box Form Container */}
+              {/* OPTIMIZED STACK WRAPPER */}
               <View style={styles.stackWrapper}>
-                <Stack screenOptions={{ 
-                  headerShown: false, 
-                  contentStyle: { backgroundColor: 'transparent' },
-                  animation: 'fade'
-                }} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: 'transparent', flex: 1 },
+                    animation: 'fade',
+                    presentation: 'transparentModal',
+                  }}
+                />
               </View>
 
-              {/* MOBILE SEQUENTIAL: Marketing appears strictly BELOW the form as full-width blocks */}
               {!isDesktop && (
                 <View style={styles.mobileMarketingSpace}>
-                   <View style={styles.divider} />
-                   <AuthMarketing isDesktop={false} />
+                  <View style={styles.divider} />
+                  <Animated.View entering={FadeInUp.duration(1000)}>
+                    <AuthMarketing isDesktop={false} />
+                  </Animated.View>
                 </View>
               )}
 
               <View style={styles.inlineFooter}>
-                <Text style={styles.footerText}>© 2025 PROJECT CRADLE. SECURE SESSION.</Text>
-                <Text style={styles.footerVersion}>V1.3.1 MASTER STACK</Text>
+                <Text style={styles.footerText}>
+                  © 2025 PROJECT CRADLE. SECURE SESSION.
+                </Text>
+                <Text style={styles.footerVersion}>V4.0 AAA+ QUALITY</Text>
               </View>
             </View>
           </ScrollView>
@@ -73,48 +107,99 @@ export default function AuthLayout() {
     </View>
   );
 }
-<Stack screenOptions={{ 
-  headerShown: false, 
-  contentStyle: { backgroundColor: 'transparent' }, // KILLS THE WHITE SQUARE
-  animation: 'fade'
-}} />
+
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  desktopLeftPane: { 
-    flex: 1.5, 
-    backgroundColor: '#020020', 
-    borderRightWidth: 1, 
-    borderRightColor: 'rgba(255,255,255,0.05)' 
+  root: { 
+    flex: 1, 
+    backgroundColor: '#020617',
   },
-  authPane: { flex: 1, backgroundColor: '#020617' },
-  authScrollContent: { 
-    flexGrow: 1, 
-    paddingHorizontal: 24, 
-    paddingVertical: 60, 
-    alignItems: 'center' 
+  iconAnchor: { 
+    position: 'absolute', 
+    top: 40, 
+    left: 40, 
+    zIndex: 100 
   },
-  authConstraint: { width: '100%', maxWidth: 450 },
-  stackWrapper: { 
+  desktopIcon: { 
+    width: 52, 
+    height: 52, 
+    borderRadius: 14 
+  },
+  desktopLeftPane: {
+    flex: 1.5,
+    backgroundColor: '#020020',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.05)',
+  },
+  marketingScroll: { 
+    padding: 80, 
+    paddingTop: 120,
+    paddingBottom: 80,
+  },
+  authPane: { 
+    flex: 1, 
+    backgroundColor: '#020617' 
+  },
+  authScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authConstraint: { 
+    width: '100%', 
+    maxWidth: 480,
+    alignItems: 'center',
+  },
+  stackWrapper: {
     width: '100%',
-    minHeight: Platform.OS === 'web' ? 700 : 600, 
-    justifyContent: 'center'
+    minHeight: 650, // Increased for better form visibility
+    backgroundColor: 'transparent',
+    borderRadius: 32,
+    overflow: 'visible',
+    marginBottom: 20,
   },
-  mobileHeader: { alignItems: 'center', marginBottom: 40 },
-  mobileTitle: { color: '#FFF', fontSize: 32, fontWeight: '900', letterSpacing: -1 },
+  mobileHeader: { 
+    alignItems: 'center', 
+    marginBottom: 32, 
+    gap: 16 
+  },
+  mobileIcon: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 16 
+  },
+  mobileTitle: { 
+    color: '#FFF', 
+    fontSize: 32, 
+    fontWeight: '900' 
+  },
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.08)',
     width: '100%',
-    marginVertical: 40
+    marginVertical: 32,
   },
-  mobileMarketingSpace: { width: '100%' },
-  inlineFooter: { 
-    marginTop: 60, 
-    paddingTop: 32, 
-    borderTopWidth: 1, 
-    borderTopColor: 'rgba(255,255,255,0.05)', 
-    alignItems: 'center'
+  mobileMarketingSpace: { 
+    width: '100%',
+    marginBottom: 20,
   },
-  footerText: { color: '#475569', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  footerVersion: { color: '#1E293B', fontSize: 10, fontWeight: '900', marginTop: 4 }
+  inlineFooter: {
+    marginTop: 40,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+  },
+  footerText: { 
+    color: '#475569', 
+    fontSize: 10, 
+    fontWeight: '800' 
+  },
+  footerVersion: {
+    color: '#1E293B',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 4,
+  },
 });
