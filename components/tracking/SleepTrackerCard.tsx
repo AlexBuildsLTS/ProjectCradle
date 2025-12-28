@@ -1,10 +1,10 @@
 /**
- * PROJECT CRADLE: SLEEP TRACKER HUD V2.0 (AAA+ FINAL)
+ * PROJECT CRADLE: SLEEP TRACKER HUD V2.5 (AAA+ FINAL)
  * Path: components/tracking/SleepTrackerCard.tsx
  * FIXES:
- * 1. RENDERING STABILITY: Switched to flat style objects for Web/APK safety.
+ * 1. CLIPPING RESOLUTION: Removed fixed height to prevent button cutoff.
  * 2. PRO-ROW SYNC: Far-left icon architecture for 0% overlap.
- * 3. DYNAMIC HUD: Real-time toggle between 'Wake Window' and 'Sleep Session'.
+ * 3. DYNAMIC HUD: Real-time scaling for S20 Ultra viewports.
  */
 
 import { Info, Moon, Play, Square, Zap } from 'lucide-react-native';
@@ -25,6 +25,7 @@ export const SleepTrackerCard = ({
 }: SleepTrackerProps) => {
   return (
     <GlassCard style={styles.card}>
+      {/* 1. HEADER HUD */}
       <View style={styles.header}>
         <View style={styles.headerTitle}>
           <View style={styles.iconBox}>
@@ -32,11 +33,12 @@ export const SleepTrackerCard = ({
           </View>
           <Text style={styles.titleText}>SLEEP COMMAND</Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity hitSlop={20}>
           <Info size={16} color="#475569" />
         </TouchableOpacity>
       </View>
 
+      {/* 2. BIOMETRIC DATA STACK */}
       <View style={styles.content}>
         <Text style={styles.label}>
           {isTracking ? 'ACTIVE SESSION ELAPSED' : 'LAST WAKE WINDOW'}
@@ -44,11 +46,12 @@ export const SleepTrackerCard = ({
         <View style={styles.valueRow}>
           <Text style={styles.mainValue}>{lastSleepTime}</Text>
           {isTracking && (
-            <Zap size={24} color="#4FD1C7" style={styles.pulseIcon} />
+            <Zap size={28} color="#4FD1C7" style={styles.pulseIcon} />
           )}
         </View>
       </View>
 
+      {/* 3. DYNAMIC ACTION BUTTON */}
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.8}
@@ -75,8 +78,9 @@ export const SleepTrackerCard = ({
 const styles = StyleSheet.create({
   card: {
     padding: 24,
+    paddingBottom: 32, // REQUIRED BREATHING ROOM
     borderRadius: 32,
-    height: 210,
+    minHeight: 240, // INCREASED TO STOP CLIPPING
     justifyContent: 'space-between',
   },
   header: {
@@ -84,7 +88,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   iconBox: {
     width: 36,
     height: 36,
@@ -99,26 +107,48 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.5,
   },
-  content: { marginVertical: 16 },
+  content: {
+    marginVertical: 20,
+  },
   label: {
     color: '#475569',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mainValue: { color: '#FFF', fontSize: 36, fontWeight: '900' },
-  pulseIcon: { opacity: 0.8 },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  mainValue: {
+    color: '#FFF',
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  pulseIcon: {
+    opacity: 0.8,
+  },
   btn: {
-    height: 56,
-    borderRadius: 16,
+    height: 64, // OPTIMIZED TOUCH TARGET
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
   },
-  btnStart: { backgroundColor: '#4FD1C7' },
-  btnStop: { backgroundColor: '#F87171' },
-  btnText: { color: '#FFF', fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  btnStart: {
+    backgroundColor: '#4FD1C7',
+  },
+  btnStop: {
+    backgroundColor: '#F87171',
+  },
+  btnText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 13,
+    letterSpacing: 1,
+  },
 });
