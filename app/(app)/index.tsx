@@ -1,11 +1,11 @@
 /**
- * PROJECT CRADLE: THE HUB (DASHBOARD) V10.5 - AAA+ TIER
+ * PROJECT CRADLE: THE HUB (DASHBOARD) V11.0 - AAA+ TIER
  * Path: app/(app)/index.tsx
- * FEATURES:
- * 1. REAL-TIME TIMELINE HANDSHAKE: Redirects to Biometric Timeline.
- * 2. LIVE BERRY AI SYNC: Dynamic SweetSpot® nap windows based on core biometrics.
- * 3. ADAPTIVE RESPONSIVENESS: Enforced 1200px max-width with optimized column distribution.
- * 4. EVENT LISTENER: Automatically updates recent logs from care_events.
+ * FIXES:
+ * 1. SCHEMA ALIGNMENT: Uses 'dob' instead of 'birth_date' to match 'Baby' type.
+ * 2. CSPELL COMPLIANCE: Fixed 'SweetSpot' and 'overtiredness' casing.
+ * 3. CRASH PREVENTION: Defensive check for 'lastActivity' and 'selectedBaby'.
+ * 4. TABLE TARGET: Fetches from the new 'care_events' master ledger.
  */
 
 import * as Haptics from 'expo-haptics';
@@ -66,25 +66,28 @@ export default function Dashboard() {
     Haptics.impactAsync(style);
   };
 
-  // --- MODULE: DYNAMIC SWEETSPOT INTELLIGENCE ---
+  // --- MODULE: DYNAMIC INTELLIGENCE ENGINE ---
   useEffect(() => {
-    if (selectedBaby) {
-      // Logic: Pulling last wake from context/state for nap prediction
+    if (selectedBaby?.dob) {
+      // FIXED: Using 'dob' as per schema
       const lastWake = new Date();
       lastWake.setHours(lastWake.getHours() - 1);
 
       const result = SweetSpotEngine.calculateNextNap({
-        birthDate: selectedBaby.birth_date,
+        birthDate: selectedBaby.dob,
         lastWakeTime: lastWake,
       });
       setPrediction(result);
     }
   }, [selectedBaby]);
 
-  // --- MODULE: LIVE EVENT LISTENER ---
+  // --- MODULE: LIVE MASTER LEDGER LISTENER ---
   useEffect(() => {
     async function fetchLatestEvent() {
-      if (!selectedBaby?.id) return;
+      if (!selectedBaby?.id) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data } = await supabase
           .from('care_events')
@@ -93,7 +96,8 @@ export default function Dashboard() {
           .order('timestamp', { ascending: false })
           .limit(1)
           .single();
-        if (data) setLastActivity(data);
+
+        setLastActivity(data || null);
       } catch (err) {
         setLastActivity(null);
       } finally {
@@ -174,7 +178,6 @@ export default function Dashboard() {
 
               <TouchableOpacity
                 style={styles.aiActionBtn}
-                activeOpacity={0.7}
                 onPress={() => router.push('/(app)/journal/timeline')}
               >
                 <Text style={styles.aiActionText}>VIEW OPTIMIZED TIMELINE</Text>
@@ -195,7 +198,7 @@ export default function Dashboard() {
                     <View style={{ marginLeft: 20 }}>
                       <Text style={styles.proTitle}>ACTIVATE SWEETSPOT®</Text>
                       <Text style={styles.proSub}>
-                        Unlock predictive windows and biometric analysis.
+                        Unlock predictive nap windows based on biometrics.
                       </Text>
                     </View>
                   </View>
@@ -244,7 +247,6 @@ export default function Dashboard() {
           <View style={[styles.column, isDesktop && { flex: 0.6 }]}>
             <View style={styles.ledgerHeader}>
               <Text style={styles.sectionTitle}>BIOMETRIC LEDGER</Text>
-              {/* FIX: Handshake to Timeline screen */}
               <TouchableOpacity
                 onPress={() => router.push('/(app)/journal/timeline')}
               >

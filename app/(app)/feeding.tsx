@@ -1,12 +1,11 @@
 /**
- * PROJECT CRADLE: MASTER FEEDING COMMAND V2.0 (AAA+ TIER)
+ * PROJECT CRADLE: MASTER FEEDING COMMAND V10.0 (AAA+ STABLE)
  * Path: app/(app)/feeding.tsx
- * THEME: PROJECT CRADLE (Teal #4FD1C7 | Obsidian #020617)
- * * MODULES:
- * 1. SCHEMA COMPLIANCE: Valid UUID correlation_id and user_id mapping.
- * 2. TOP-LEFT ICON LOCK: Absolute positioning for high-fidelity card density.
- * 3. REAL-TIME DB ENGINE: Hardened Supabase insert logic for Bottle, Solids, and Nursing.
- * 4. LOG RECOVERY: Auto-refreshing ledger ensures recent logs appear instantly.
+ * FIXES:
+ * 1. TARGET TABLE: Updated to public.pumping_logs.
+ * 2. COLUMN ALIGNMENT: amount_ml, duration_minutes, side.
+ * 3. TOP-LEFT ICON LOCK: Absolute positioning (20px/20px).
+ * 4. STABILITY: Defensive coding for context properties.
  */
 
 import { GlassCard } from '@/components/glass/GlassCard';
@@ -27,18 +26,9 @@ import {
   View,
 } from 'react-native';
 
-// HELPER: Generate valid UUID for correlation_id
-const generateUUID = () => {
-  if (Platform.OS === 'web') return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0,
-      v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
-
 export default function FeedingScreen() {
-  const { selectedBaby } = useFamily();
+  // FIX: Default values to prevent crashes if context is syncing
+  const { selectedBaby = null } = useFamily();
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
@@ -46,83 +36,71 @@ export default function FeedingScreen() {
   const [seconds, setSeconds] = useState(0);
   const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
-  const timerRef = useRef<any>(null);
+  const intervalRef = useRef<any>(null);
 
-  // --- MODULE: DATA FETCHING ---
+  // MODULE: DATA RECOVERY (Target: pumping_logs)
   const fetchLogs = async () => {
-    if (!selectedBaby?.id) return;
-    const { data, error } = await supabase
-      .from('care_events')
-      .select('*')
-      .eq('baby_id', selectedBaby.id)
-      .eq('event_type', 'feeding')
-      .order('timestamp', { ascending: false })
-      .limit(5);
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('pumping_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
 
-    if (!error && data) setLogs(data);
+      if (!error && data) setLogs(data);
+    } catch (e) {
+      console.error('[Cradle Core] Log Sync Error:', e);
+    }
   };
 
   useEffect(() => {
     fetchLogs();
-  }, [selectedBaby]);
+  }, [user?.id]);
 
-  // --- MODULE: TIMER ENGINE ---
+  // MODULE: TIMER ENGINE
   useEffect(() => {
     if (isTracking) {
-      timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+      intervalRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [isTracking]);
 
-  // --- MODULE: DATABASE HANDSHAKE ---
-  const executeSave = async (type: string, details: any) => {
-    if (!selectedBaby?.id || !user?.id) {
-      return Alert.alert(
-        'SYNC ERROR',
-        'Identity core or baby profile not detected.',
-      );
-    }
-
+  // MODULE: DATABASE HANDSHAKE (SCHEMA COMPLIANT)
+  const executeSave = async (sideParam: string, amount: number) => {
+    if (!user?.id) return Alert.alert('SYNC ERROR', 'Identity core missing.');
     setLoading(true);
-    const correlationId = generateUUID();
 
     try {
-      const { error } = await supabase.from('care_events').insert([
-        {
-          id: generateUUID(),
-          correlation_id: correlationId,
-          baby_id: selectedBaby.id,
-          user_id: user.id,
-          event_type: 'feeding',
-          timestamp: new Date().toISOString(),
-          metadata: { ...details, feeding_type: type },
-          notes:
-            details.notes ||
-            `${type.toUpperCase()} session logged via Command Center.`,
-        },
-      ]);
+      // Structure strictly mapping to your public.pumping_logs table
+      const payload = {
+        user_id: user.id,
+        amount_ml: amount,
+        duration_minutes: Math.max(1, Math.floor(seconds / 60)), // Schema: int4
+        side: sideParam, // Schema: text
+        timestamp: new Date().toISOString(), // Schema: timestamptz
+      };
 
+      const { error } = await supabase.from('pumping_logs').insert([payload]);
       if (error) throw error;
 
       if (Platform.OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // RESET STATE
-      setIsTracking(false);
+      // RESET AND REFRESH
       setSeconds(0);
+      setIsTracking(false);
       setActiveSide(null);
-      await fetchLogs(); // FORCE REFRESH
-      Alert.alert(
-        'SYNC SUCCESS',
-        'Feeding session committed to encrypted core.',
-      );
+      await fetchLogs();
+      Alert.alert('SYNC SUCCESS', 'Session committed to family core.');
     } catch (e: any) {
       Alert.alert('SAVE FAILED', e.message);
-      console.error('DB Handshake Error:', e);
+      console.error('Supabase Error:', e);
     } finally {
       setLoading(false);
     }
@@ -140,16 +118,17 @@ export default function FeedingScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Text style={styles.title}>FEEDING COMMAND</Text>
       <Text style={styles.target}>
-        ACTIVE IDENTIFIER: {selectedBaby?.name?.toUpperCase() || 'CORE'}
+        ACTIVE CORE: {selectedBaby?.name?.toUpperCase() || 'CORE'}
       </Text>
 
-      {/* BREASTFEEDING COMMAND CARD */}
+      {/* BREASTFEEDING CARD */}
       <GlassCard style={styles.mainCard}>
+        {/* TOP-LEFT ICON LOCK */}
         <View style={styles.topLeftIcon}>
-          <Timer size={20} color="#4FD1C7" />
+          <Timer size={22} color="#4FD1C7" />
         </View>
 
-        <Text style={styles.cardLabel}>BREASTFEEDING TRACKER</Text>
+        <Text style={styles.cardLabel}>NURSING TRACKER</Text>
         <Text style={styles.timerDisplay}>{formatTime(seconds)}</Text>
 
         <View style={styles.sideGrid}>
@@ -187,9 +166,7 @@ export default function FeedingScreen() {
 
           <TouchableOpacity
             style={styles.saveBtn}
-            onPress={() =>
-              executeSave('breast', { duration: seconds, side: activeSide })
-            }
+            onPress={() => executeSave(activeSide || 'both', 0)}
             disabled={seconds < 1 || loading}
           >
             {loading ? (
@@ -204,11 +181,11 @@ export default function FeedingScreen() {
         </View>
       </GlassCard>
 
-      {/* QUICK LOG GRID (TOP-LEFT ICONS) */}
+      {/* QUICK LOG GRID */}
       <View style={styles.quickGrid}>
         <TouchableOpacity
           style={styles.quickBox}
-          onPress={() => executeSave('bottle', { amount_ml: 120 })}
+          onPress={() => executeSave('bottle', 120)}
         >
           <GlassCard style={styles.innerBox}>
             <View style={styles.miniTopLeftIcon}>
@@ -220,9 +197,7 @@ export default function FeedingScreen() {
 
         <TouchableOpacity
           style={styles.quickBox}
-          onPress={() =>
-            executeSave('solids', { notes: 'Solid food introduction' })
-          }
+          onPress={() => executeSave('solids', 0)}
         >
           <GlassCard style={styles.innerBox}>
             <View style={styles.miniTopLeftIcon}>
@@ -250,22 +225,17 @@ export default function FeedingScreen() {
                 <Milk size={16} color="#4FD1C7" />
                 <View>
                   <Text style={styles.logMain}>
-                    {log.metadata?.feeding_type?.toUpperCase() || 'FEEDING'}
+                    {log.side?.toUpperCase() || 'SESSION'}
                   </Text>
                   <Text style={styles.logSub}>
-                    {new Date(log.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {new Date(log.timestamp).toLocaleTimeString()}
                   </Text>
                 </View>
               </View>
               <Text style={styles.logMeta}>
-                {log.metadata?.duration
-                  ? `${Math.floor(log.metadata.duration / 60)}m`
-                  : log.metadata?.amount_ml
-                  ? `${log.metadata.amount_ml}ml`
-                  : 'LOGGED'}
+                {log.amount_ml > 0
+                  ? `${log.amount_ml}ml`
+                  : `${log.duration_minutes}m`}
               </Text>
             </GlassCard>
           ))
@@ -293,7 +263,13 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 32,
   },
-  mainCard: { padding: 32, borderRadius: 40, position: 'relative' },
+  mainCard: {
+    padding: 32,
+    borderRadius: 40,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  // FIX: ABSOLUTE ICON LOCK
   topLeftIcon: {
     position: 'absolute',
     top: 24,
@@ -301,6 +277,16 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(79, 209, 199, 0.05)',
     borderRadius: 12,
+    zIndex: 10,
+  },
+  miniTopLeftIcon: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    padding: 6,
+    backgroundColor: 'rgba(79, 209, 199, 0.05)',
+    borderRadius: 8,
+    zIndex: 10,
   },
   cardLabel: {
     color: 'rgba(148, 163, 184, 0.4)',
@@ -363,14 +349,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     height: 110,
     position: 'relative',
-  },
-  miniTopLeftIcon: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    padding: 6,
-    backgroundColor: 'rgba(79, 209, 199, 0.05)',
-    borderRadius: 8,
   },
   quickLabel: {
     color: '#FFF',

@@ -1,14 +1,15 @@
 /**
- * PROJECT CRADLE: BABY CORE INITIALIZER V1.0
+ * PROJECT CRADLE: BABY CORE INITIALIZER V1.1 (AAA+ TIER)
  * Path: app/(app)/family-init.tsx
- * FEATURES:
- * - Biometric birth data entry.
- * - Dynamic measurement unit selection (Metric/Imperial).
- * - Enforced 450px MaxWidth for UI consistency.
+ * FIXES:
+ * 1. SCHEMA ALIGNMENT: Fixed 'parent_id' and 'dob' mapping.
+ * 2. DATA HANDSHAKE: Ensured weight is sent as 'birth_weight_grams'.
+ * 3. STABILITY: Added explicit user_id check to prevent anonymous insert failures.
  */
 
 import { GlassCard } from '@/components/glass/GlassCard';
 import { useAuth } from '@/context/auth';
+import { useFamily } from '@/context/family';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { Baby, Calendar, ChevronRight, Scale } from 'lucide-react-native';
@@ -27,42 +28,52 @@ import {
 export default function BabyCoreInit() {
   const router = useRouter();
   const { user } = useAuth();
+  const { refreshBabies } = useFamily();
   const [loading, setLoading] = useState(false);
 
   // BIOMETRIC STATE
   const [babyName, setBabyName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [weight, setWeight] = useState('');
+  const [birthDate, setBirthDate] = useState(''); // Mapping to 'dob'
+  const [weight, setWeight] = useState(''); // Mapping to 'birth_weight_grams'
 
   const handleInitialize = async () => {
     if (!babyName || !birthDate) {
       return Alert.alert(
         'DATA MISSING',
-        'Identifier name and birth date are required.',
+        'Identifier name and birth date (YYYY-MM-DD) are required.',
       );
+    }
+
+    if (!user?.id) {
+      return Alert.alert('AUTH ERROR', 'User identity not found.');
     }
 
     setLoading(true);
     try {
+      // SCHEMA COMPLIANCE: parent_id, name, dob, birth_weight_grams
       const { error } = await supabase.from('babies').insert([
         {
-          family_id: user?.id, // Assumes user ID maps to primary family core
+          parent_id: user.id,
           name: babyName.trim(),
-          birth_date: birthDate,
-          initial_weight: weight,
-          status: 'active',
+          dob: birthDate,
+          birth_weight_grams: weight ? parseInt(weight) : null,
         },
       ]);
 
       if (error) throw error;
 
+      // Update the global family context so the new baby appears in the HUD
+      await refreshBabies();
+
       Alert.alert(
         'CORE INITIALIZED',
-        `${babyName.toUpperCase()} has been registered to the family core.`,
+        `${babyName.toUpperCase()} has been registered to your biometric ledger.`,
       );
+
       router.push('/(app)/family');
     } catch (e: any) {
       Alert.alert('INIT ERROR', e.message);
+      console.error('Database Registration Error:', e);
     } finally {
       setLoading(false);
     }
@@ -106,14 +117,15 @@ export default function BabyCoreInit() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>INITIAL WEIGHT (OPTIONAL)</Text>
+            <Text style={styles.label}>BIRTH WEIGHT (GRAMS)</Text>
             <View style={styles.inputWrapper}>
               <Scale size={18} color="#4FD1C7" style={styles.fieldIcon} />
               <TextInput
                 style={styles.flexInput}
                 value={weight}
                 onChangeText={setWeight}
-                placeholder="3.5kg / 7lb 11oz"
+                keyboardType="numeric"
+                placeholder="3500"
                 placeholderTextColor="#475569"
               />
             </View>

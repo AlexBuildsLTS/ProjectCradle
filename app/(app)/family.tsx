@@ -1,480 +1,459 @@
 /**
- * PROJECT CRADLE: MASTER ADAPTIVE ARCHITECTURE V12.3
- * Path: app/(app)/_layout.tsx
- * THEME: PROJECT CRADLE (Teal #4FD1C7 | Obsidian #020617)
- * * FEATURES:
- * 1. ADMIN GATE: Strict RBAC navigation—Admin tab ONLY appears for ADMIN role.
- * 2. ICON FIX: Explicitly assigns ShieldAlert icon for the Admin tab.
- * 3. ADAPTIVE UI: Glassmorphism Tabs (Mobile) vs. Enterprise Sidebar (Desktop).
- * 4. STABILITY: Fail-safe identity engine prevents infinite loading on web.
+ * PROJECT CRADLE: FAMILY MANAGEMENT CORE V1.1 (AAA+ TIER)
+ * Path: app/(app)/family.tsx
+ * FIXES:
+ * 1. DEFENSIVE CODING: Added default values to destructuring to prevent '.length' crashes.
+ * 2. SCHEMA SYNC: Strictly maps to public.babies (parent_id, birth_weight_grams, dob).
+ * 3. TS TYPE SAFETY: Explicitly typed baby mapping parameters.
  */
-
-import { BlurView } from 'expo-blur';
-import { Redirect, Slot, Tabs, usePathname, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import {
-  Activity,
   Baby,
-  Bell,
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  Milk,
-  Settings,
-  ShieldAlert,
-  Sparkles,
+  Calendar,
+  History,
+  Plus,
+  Scale,
+  ShieldCheck,
+  Trash2,
 } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 
-import { BerryAssistant } from '@/components/ai/BerryAssistant';
-import GlobalHeader from '@/components/navigation/GlobalHeader';
+import { GlassCard } from '@/components/glass/GlassCard';
 import { useAuth } from '@/context/auth';
-import { Theme } from '@/lib/shared/Theme';
+import { useFamily } from '@/context/family';
 import { supabase } from '@/lib/supabase';
-import { NotificationService } from '@/services/NotificationService';
 
-export default function AppLayout() {
-  const { session, isLoading: authLoading } = useAuth();
-  const { width } = useWindowDimensions();
+// Define Interface for the Ledger
+interface BabyRecord {
+  id: string;
+  name: string;
+  dob: string;
+  birth_weight_grams: number | null;
+}
+
+export default function FamilyScreen() {
   const router = useRouter();
-  const pathname = usePathname();
+  const { user } = useAuth();
 
-  const isDesktop = width >= 1024;
-  const [profile, setProfile] = useState<any>(null);
-  const [identityLoading, setIdentityLoading] = useState(true);
+  // FIX: Default values to prevent undefined.length crash
+  const {
+    babies = [],
+    selectedBaby = null,
+    selectBaby = () => {},
+    refreshBabies = async () => {},
+  } = useFamily();
 
-  // --- 1. IDENTITY ENGINE: RESOLVES ROLES FOR RBAC GATING ---
-  useEffect(() => {
-    let isMounted = true;
-    async function resolveIdentity() {
-      if (!session?.user?.id) {
-        if (isMounted) setIdentityLoading(false);
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        if (isMounted && data) setProfile(data);
-      } catch (err) {
-        console.error('[Cradle Master] Identity Sync Error:', err);
-      } finally {
-        if (isMounted) setIdentityLoading(false);
-      }
-    }
+  const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-    resolveIdentity();
+  // BIOMETRIC INPUT STATE
+  const [name, setName] = useState('');
+  const [dob, setDob] = useState('');
+  const [weight, setWeight] = useState('');
 
-    // FAIL-SAFE: Prevents infinite loading loops on web sync hangs
-    const timeout = setTimeout(() => {
-      if (isMounted && identityLoading) setIdentityLoading(false);
-    }, 2000);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeout);
-    };
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    if (session?.user?.id && Platform.OS !== 'web') {
-      NotificationService.registerForPushNotifications(session.user.id);
-    }
-  }, [session?.user?.id]);
-
-  // --- 2. DYNAMIC RBAC NAVIGATION MEMO ---
-  const menuItems = useMemo(() => {
-    const role = profile?.role || 'MEMBER';
-    const isPremium = ['ADMIN', 'PREMIUM_MEMBER'].includes(role);
-    const isAdmin = role === 'ADMIN';
-
-    const baseRoutes = [
-      { name: 'index', icon: LayoutDashboard, label: 'Hub', path: '/(app)/' },
-      { name: 'feeding', icon: Milk, label: 'Feeding', path: '/(app)/feeding' },
-      {
-        name: 'growth',
-        icon: Activity,
-        label: 'Growth',
-        path: '/(app)/growth',
-      },
-      {
-        name: 'journal',
-        icon: FileText,
-        label: 'Journal',
-        path: '/(app)/journal',
-      },
-    ];
-
-    if (isPremium) {
-      baseRoutes.push({
-        name: 'notifications',
-        icon: Bell,
-        label: 'Alerts',
-        path: '/(app)/notifications',
-      });
-    }
-
-    // ADMIN-ONLY NAVIGATION ITEM
-    if (isAdmin) {
-      baseRoutes.push({
-        name: 'admin',
-        icon: ShieldAlert,
-        label: 'Console',
-        path: '/(app)/admin',
-      });
-    }
-
-    return baseRoutes;
-  }, [profile]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.replace('/(auth)/sign-in' as any);
+  const triggerFeedback = () => {
+    if (Platform.OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  if (authLoading || identityLoading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator color={Theme.colors.primary} size="large" />
-        <Text style={styles.loaderText}>SYNCHRONIZING CORE...</Text>
-      </View>
+  const handleAddBaby = async () => {
+    if (!name || !dob)
+      return Alert.alert(
+        'REQUIRED',
+        'Core identifier and birth date are mandatory.',
+      );
+    if (!user?.id) return Alert.alert('SYNC ERROR', 'User core not detected.');
+
+    setLoading(true);
+    try {
+      // Handshake with public.babies
+      const { error } = await supabase.from('babies').insert([
+        {
+          parent_id: user.id,
+          name: name.trim(),
+          dob: dob,
+          birth_weight_grams: weight ? parseInt(weight) : null,
+        },
+      ]);
+
+      if (error) throw error;
+
+      Alert.alert(
+        'CORE ACTIVATED',
+        `${name.toUpperCase()} registered to the family ledger.`,
+      );
+      setShowAddModal(false);
+      setName('');
+      setDob('');
+      setWeight('');
+      await refreshBabies();
+    } catch (e: any) {
+      Alert.alert('SYNC FAILED', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurge = async (id: string, babyName: string) => {
+    Alert.alert(
+      'PURGE CORE',
+      `Permanently delete all biometric data for ${babyName}?`,
+      [
+        { text: 'CANCEL', style: 'cancel' },
+        {
+          text: 'PURGE',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('babies')
+              .delete()
+              .eq('id', id);
+            if (error) Alert.alert('ERROR', error.message);
+            else await refreshBabies();
+          },
+        },
+      ],
     );
-  }
+  };
 
-  if (!session) return <Redirect href={'/(auth)/sign-in' as any} />;
-
-  // --- 3. MOBILE INTERFACE (GLASS TABS) ---
-  if (!isDesktop) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#020617' }}>
-        <GlobalHeader />
-
-        <Tabs
-          screenOptions={{
-            headerShown: false,
-            tabBarActiveTintColor: Theme.colors.primary,
-            tabBarInactiveTintColor: '#475569',
-            tabBarLabelStyle: styles.mobileLabelStyle,
-            tabBarStyle: styles.mobileTabBar,
-            tabBarBackground: () =>
-              Platform.OS !== 'web' ? (
-                <BlurView
-                  intensity={30}
-                  tint="dark"
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : (
-                <View
-                  style={[
-                    StyleSheet.absoluteFill,
-                    { backgroundColor: 'rgba(2, 6, 23, 0.95)' },
-                  ]}
-                />
-              ),
-          }}
-        >
-          <Tabs.Screen
-            name="index"
-            options={{
-              title: 'Hub',
-              tabBarIcon: ({ color }) => (
-                <LayoutDashboard color={color} size={22} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="feeding"
-            options={{
-              title: 'Feed',
-              tabBarIcon: ({ color }) => <Milk color={color} size={22} />,
-            }}
-          />
-          <Tabs.Screen
-            name="growth"
-            options={{
-              title: 'Growth',
-              tabBarIcon: ({ color }) => <Activity color={color} size={22} />,
-            }}
-          />
-          <Tabs.Screen
-            name="journal"
-            options={{
-              title: 'Journal',
-              tabBarIcon: ({ color }) => <FileText color={color} size={22} />,
-            }}
-          />
-
-          {/* SECURE ADMIN TAB: RENDERS ONLY FOR AUTHENTICATED ADMINS */}
-          <Tabs.Screen
-            name="admin"
-            options={{
-              title: 'Admin',
-              href: profile?.role === 'ADMIN' ? '/(app)/admin' : null, // Strict null if not admin
-              tabBarIcon: ({ color }) => (
-                <ShieldAlert color={color} size={22} />
-              ),
-            }}
-          />
-
-          <Tabs.Screen
-            name="settings"
-            options={{
-              title: 'Settings',
-              tabBarIcon: ({ color }) => <Settings color={color} size={22} />,
-            }}
-          />
-
-          <Tabs.Screen name="shared" options={{ href: null }} />
-          <Tabs.Screen name="notifications" options={{ href: null }} />
-          <Tabs.Screen name="support" options={{ href: null }} />
-          <Tabs.Screen name="health" options={{ href: null }} />
-        </Tabs>
-
-        <BerryAssistant />
-      </View>
-    );
-  }
-
-  // --- 4. DESKTOP INTERFACE (ENTERPRISE SIDEBAR) ---
   return (
-    <View style={styles.desktopRoot}>
-      <View style={styles.sidebar}>
-        <View style={styles.brandHeader}>
-          <View style={styles.brandIconWrapper}>
-            <Baby color="#020617" size={20} />
-          </View>
-          <Text style={styles.brandTitle}>Cradle</Text>
+    <ScrollView style={styles.root} contentContainerStyle={styles.scroll}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>FAMILY CORE</Text>
+          <Text style={styles.subtitle}>
+            ACTIVE IDENTITIES: {babies?.length || 0}
+          </Text>
         </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          style={{ flex: 1, padding: 16 }}
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => setShowAddModal(true)}
         >
-          <Text style={styles.sidebarSectionLabel}>MONITORING</Text>
+          <Plus size={20} color="#020617" />
+          <Text style={styles.addBtnText}>ADD BABY</Text>
+        </TouchableOpacity>
+      </View>
 
-          {menuItems.map((item) => {
-            const isActive = pathname.startsWith(item.path);
-            return (
-              <TouchableOpacity
-                key={item.name}
-                onPress={() => router.push(item.path as any)}
-                style={[
-                  styles.sidebarNavItem,
-                  isActive && styles.sidebarNavActive,
-                ]}
-              >
-                <item.icon
-                  size={18}
-                  color={isActive ? Theme.colors.primary : '#94A3B8'}
-                />
-                <Text
-                  style={[styles.sidebarNavText, isActive && { color: '#FFF' }]}
-                >
-                  {item.label}
-                </Text>
-                {isActive && <View style={styles.activeIndicator} />}
-              </TouchableOpacity>
-            );
-          })}
-
-          <View style={styles.sidebarDivider} />
-          <Text style={styles.sidebarSectionLabel}>SYSTEM CORE</Text>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/settings' as any)}
-            style={[
-              styles.sidebarNavItem,
-              pathname.includes('settings') && styles.sidebarNavActive,
-            ]}
-          >
-            <Settings
+      {/* MODULE: LOCKED BIOMETRIC CORE */}
+      <Text style={styles.sectionLabel}>ACTIVE CONTEXT</Text>
+      {selectedBaby ? (
+        <GlassCard style={styles.activeCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.activeIcon}>
+              <Baby size={24} color="#4FD1C7" />
+            </View>
+            <View>
+              <Text style={styles.activeName}>
+                {selectedBaby.name.toUpperCase()}
+              </Text>
+              <Text style={styles.activeStatus}>CORE SECURED & ACTIVE</Text>
+            </View>
+            <ShieldCheck
               size={18}
-              color={
-                pathname.includes('settings') ? Theme.colors.primary : '#94A3B8'
-              }
+              color="#4FD1C7"
+              style={{ marginLeft: 'auto' }}
             />
-            <Text style={styles.sidebarNavText}>Account Settings</Text>
-          </TouchableOpacity>
-
-          <View style={styles.proBadgeCard}>
-            <View style={styles.proBadgeHeader}>
-              <Sparkles
-                size={14}
-                color={
-                  profile?.role === 'ADMIN'
-                    ? Theme.colors.primary
-                    : Theme.colors.secondary
-                }
-              />
-              <Text
-                style={[
-                  styles.proBadgeLabel,
-                  profile?.role === 'ADMIN' && { color: Theme.colors.primary },
-                ]}
-              >
-                {profile?.role === 'ADMIN'
-                  ? 'SYSTEM ADMIN'
-                  : profile?.role === 'PREMIUM_MEMBER'
-                  ? 'PRO ACTIVE'
-                  : 'UPGRADE CORE'}
+          </View>
+          <View style={styles.activeStats}>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>BORN</Text>
+              <Text style={styles.statValue}>{selectedBaby.dob}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>WEIGHT</Text>
+              <Text style={styles.statValue}>
+                {selectedBaby.birth_weight_grams || '--'}g
               </Text>
             </View>
-            <Text style={styles.proBadgeDesc}>
-              {profile?.role === 'ADMIN'
-                ? 'Core management modules unlocked.'
-                : 'Intelligence is analyzing biometric trends.'}
-            </Text>
           </View>
+        </GlassCard>
+      ) : (
+        <GlassCard style={styles.emptyCard}>
+          <History size={32} color="#475569" />
+          <Text style={styles.emptyText}>
+            No biometric core selected. Use the ledger below.
+          </Text>
+        </GlassCard>
+      )}
 
-          <View style={styles.sidebarDivider} />
-
+      {/* MODULE: IDENTITY LEDGER */}
+      <Text style={styles.sectionLabel}>IDENTITY LEDGER</Text>
+      <View style={styles.ledger}>
+        {babies.map((b: BabyRecord) => (
           <TouchableOpacity
-            onPress={handleSignOut}
-            style={[styles.sidebarNavItem, { marginTop: 10 }]}
+            key={b.id}
+            style={[
+              styles.ledgerItem,
+              selectedBaby?.id === b.id && styles.ledgerItemActive,
+            ]}
+            onPress={() => {
+              triggerFeedback();
+              selectBaby(b.id);
+            }}
           >
-            <LogOut size={18} color="#F87171" />
-            <Text style={[styles.sidebarNavText, { color: '#F87171' }]}>
-              Terminate Session
-            </Text>
+            <View style={styles.ledgerIcon}>
+              <Baby
+                size={18}
+                color={selectedBaby?.id === b.id ? '#4FD1C7' : '#94A3B8'}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.ledgerName,
+                  selectedBaby?.id === b.id && { color: '#FFF' },
+                ]}
+              >
+                {b.name.toUpperCase()}
+              </Text>
+              <Text style={styles.ledgerDob}>BORN: {b.dob}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => handlePurge(b.id, b.name)}
+              style={styles.purgeBtn}
+            >
+              <Trash2 size={16} color="#F87171" />
+            </TouchableOpacity>
           </TouchableOpacity>
-        </ScrollView>
+        ))}
       </View>
 
-      <View style={{ flex: 1 }}>
-        <GlobalHeader />
-        <View style={styles.mainViewport}>
-          <Slot />
+      {/* MODAL: INITIALIZE NEW CORE */}
+      <Modal visible={showAddModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <GlassCard style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>INITIALIZE NEW CORE</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Text style={styles.closeText}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.form}>
+              <Text style={styles.inputLabel}>IDENTIFIER NAME</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g. Steven"
+                placeholderTextColor="#475569"
+              />
+
+              <Text style={styles.inputLabel}>BIRTH DATE (YYYY-MM-DD)</Text>
+              <View style={styles.inputWrap}>
+                <Calendar size={18} color="#4FD1C7" />
+                <TextInput
+                  style={styles.flexInput}
+                  value={dob}
+                  onChangeText={setDob}
+                  placeholder="2025-01-01"
+                  placeholderTextColor="#475569"
+                />
+              </View>
+
+              <Text style={styles.inputLabel}>BIRTH WEIGHT (GRAMS)</Text>
+              <View style={styles.inputWrap}>
+                <Scale size={18} color="#4FD1C7" />
+                <TextInput
+                  style={styles.flexInput}
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="numeric"
+                  placeholder="3500"
+                  placeholderTextColor="#475569"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleAddBaby}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#020617" />
+                ) : (
+                  <Text style={styles.submitText}>ACTIVATE IDENTITY</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </GlassCard>
         </View>
-      </View>
-
-      <BerryAssistant />
-    </View>
+      </Modal>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  loaderContainer: {
-    flex: 1,
-    backgroundColor: '#020617',
+  root: { flex: 1, backgroundColor: '#020617' },
+  scroll: { padding: 24, paddingBottom: 120 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
+    marginBottom: 40,
   },
-  loaderText: {
+  title: { color: '#FFF', fontSize: 28, fontWeight: '900', letterSpacing: 1 },
+  subtitle: {
     color: '#4FD1C7',
     fontSize: 10,
     fontWeight: '900',
+    marginTop: 4,
     letterSpacing: 2,
-    textTransform: 'uppercase',
   },
-  mobileTabBar: {
-    backgroundColor: 'transparent',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    height: 90,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 15,
-  },
-  mobileLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 4 },
-  desktopRoot: { flex: 1, backgroundColor: '#020617', flexDirection: 'row' },
-  sidebar: {
-    width: 300,
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255, 255, 255, 0.05)',
-    backgroundColor: '#020617',
-  },
-  brandHeader: {
-    height: 80,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  brandIconWrapper: {
+  addBtn: {
     backgroundColor: '#4FD1C7',
-    padding: 8,
-    borderRadius: 12,
-  },
-  brandTitle: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: -1.5,
-  },
-  sidebarSectionLabel: {
-    color: 'rgba(148, 163, 184, 0.2)',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.8,
-    marginVertical: 14,
-    marginLeft: 12,
-  },
-  sidebarNavItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 6,
-    gap: 16,
-    position: 'relative',
-  },
-  sidebarNavActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  sidebarNavText: { color: '#94A3B8', fontSize: 14, fontWeight: '700' },
-  activeIndicator: {
-    position: 'absolute',
-    left: 0,
-    width: 4,
-    height: 18,
-    backgroundColor: '#4FD1C7',
-    borderRadius: 2,
-  },
-  sidebarDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginVertical: 24,
-  },
-  mainViewport: { flex: 1, padding: 48 },
-  proBadgeCard: {
-    marginTop: 32,
-    padding: 20,
-    backgroundColor: 'rgba(79, 209, 199, 0.05)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 209, 199, 0.1)',
-  },
-  proBadgeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  proBadgeLabel: {
+  addBtnText: { color: '#020617', fontWeight: '900', fontSize: 11 },
+  sectionLabel: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  activeCard: {
+    padding: 24,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.2)',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  activeIcon: {
+    padding: 12,
+    backgroundColor: 'rgba(79, 209, 199, 0.1)',
+    borderRadius: 16,
+  },
+  activeName: { color: '#FFF', fontSize: 22, fontWeight: '900' },
+  activeStatus: {
+    color: '#4FD1C7',
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  activeStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    padding: 16,
+    borderRadius: 20,
+  },
+  stat: { flex: 1, alignItems: 'center' },
+  statLabel: {
+    color: '#475569',
+    fontSize: 9,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  statValue: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  divider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.05)' },
+  ledger: { gap: 12 },
+  ledgerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  ledgerItemActive: {
+    borderColor: 'rgba(79, 209, 199, 0.1)',
+    backgroundColor: 'rgba(79, 209, 199, 0.05)',
+  },
+  ledgerIcon: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ledgerName: { color: '#94A3B8', fontWeight: '800', fontSize: 14 },
+  ledgerDob: { color: '#475569', fontSize: 11, marginTop: 4 },
+  purgeBtn: { padding: 10 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: { padding: 32, borderRadius: 40 },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  modalTitle: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  closeText: { color: '#475569', fontWeight: '900', fontSize: 11 },
+  form: { gap: 20 },
+  inputLabel: {
     color: '#4FD1C7',
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 1.2,
+    letterSpacing: 1.5,
   },
-  proBadgeDesc: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    padding: 18,
+    borderRadius: 16,
+    color: '#FFF',
+    fontWeight: '700',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  flexInput: { flex: 1, paddingVertical: 18, color: '#FFF', fontWeight: '700' },
+  submitBtn: {
+    backgroundColor: '#4FD1C7',
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitText: { color: '#020617', fontWeight: '900', fontSize: 13 },
+  emptyCard: { padding: 40, alignItems: 'center', gap: 16, borderRadius: 32 },
+  emptyText: { color: '#475569', fontWeight: '700', fontSize: 12 },
 });
