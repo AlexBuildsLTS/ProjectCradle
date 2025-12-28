@@ -162,3 +162,4 @@ const styles = StyleSheet.create({
   btnContent: { flexDirection: 'row', alignItems: 'center' },
   submitText: { color: '#020617', fontWeight: '900', letterSpacing: 1 }
 });
+
