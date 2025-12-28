@@ -1,58 +1,137 @@
-import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from '@supabase/supabase-js';
+import { decryptMessage } from '../_shared/crypto.ts';
 
-Deno.serve(async (req) => {
-  // 1. Handshake: Solve the OPTIONS preflight issue
-  if (req.method === 'OPTIONS') {
+const API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+);
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+};
+
+interface GeminiPart {
+  text?: string;
+  inline_data?: {
+    mime_type: string;
+    data: string;
+  };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS')
     return new Response('ok', { headers: corsHeaders });
-  }
 
   try {
-    const rawKey = Deno.env.get('ENCRYPTION_KEY');
-    if (!rawKey) throw new Error('VAULT_FAILURE: ENCRYPTION_KEY_NOT_FOUND');
+    const { prompt, image, userId } = await req.json();
 
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(rawKey.padEnd(32, '0').slice(0, 32));
+    // 1. Get API key: prefer user's key, fallback to global
+    let apiKey = Deno.env.get('GEMINI_API_KEY');
 
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'AES-CBC' },
-      false,
-      ['decrypt'],
-    );
+    if (userId) {
+      try {
+        const { data: userSecret } = await supabaseAdmin
+          .from('user_secrets')
+          .select('api_key_encrypted')
+          .eq('user_id', userId)
+          .eq('service', 'gemini')
+          .maybeSingle();
 
-    const { encryptedData, iv } = await req.json();
-    const encryptedBuffer = Uint8Array.from(atob(encryptedData), (c) =>
-      c.charCodeAt(0),
-    );
-    const ivBuffer = Uint8Array.from(atob(iv), (c) => c.charCodeAt(0));
+        if (userSecret?.api_key_encrypted) {
+          apiKey = decryptMessage(userSecret.api_key_encrypted);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user API key, using global key:', error);
+      }
+    }
 
-    const decryptedBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-CBC', iv: ivBuffer },
-      cryptoKey,
-      encryptedBuffer,
-    );
+    if (!apiKey) throw new Error('No API key available');
+    if (!prompt) throw new Error('Prompt is missing');
 
-    const result = new TextDecoder().decode(decryptedBuffer);
-    console.log('[Core] Link Established. Data decrypted successfully.');
+    // 2. Build the Content Parts
+    const parts: GeminiPart[] = [{ text: prompt }];
 
-    return new Response(JSON.stringify({ status: 'SUCCESS', result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    if (image) {
+      parts.push({
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: image, // Base64 string without prefix
+        },
+      });
+    }
+
+    // 3. Call Gemini v1beta
+    const response = await fetch(`${API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: {
+          parts: [
+            {
+              text: 'You are NorthFinance CFO AI. Analyze financial data objectively. You are a tool, not a regulated financial advisor. Provide concise, professional, and actionable insights.',
+            },
+          ],
+        },
+        contents: [{ role: 'user', parts }],
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+          topP: 0.8,
+          topK: 40,
+        },
+      }),
     });
-  } catch (error: unknown) {
-    // FIX: TYPE NARROWING
-    // We check if 'error' is an actual Error object to satisfy the Deno-TS compiler.
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : 'An unexpected core failure occurred';
 
-    console.error('[Decryption Error]', errorMessage);
+    const data = await response.json();
 
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    if (data.error) {
+      console.error('Gemini API Error:', data.error);
+      return new Response(
+        JSON.stringify({ text: `Google Error: ${data.error.message}` }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!aiText) {
+      const reason = data.candidates?.[0]?.finishReason || 'UNKNOWN';
+      return new Response(
+        JSON.stringify({
+          text: `AI Output Restricted (${reason}). Please try rephrasing.`,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    return new Response(JSON.stringify({ text: aiText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Internal Edge Error';
+    console.error('[Edge Function Error]:', msg);
+    return new Response(JSON.stringify({ text: `Edge Error: ${msg}` }), {
+      status: 200, // Return 200 so the UI can display the error message nicely
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
