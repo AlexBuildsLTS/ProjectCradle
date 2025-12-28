@@ -1,12 +1,12 @@
 /**
- * PROJECT CRADLE: MASTER ADAPTIVE ARCHITECTURE V12.3
+ * PROJECT CRADLE: MASTER ADAPTIVE ARCHITECTURE V12.9
  * Path: app/(app)/_layout.tsx
  * THEME: PROJECT CRADLE (Teal #4FD1C7 | Obsidian #020617)
  * * FEATURES:
- * 1. ADMIN GATE: Strict RBAC navigation—Admin tab ONLY appears for ADMIN role.
- * 2. ICON FIX: Explicitly assigns ShieldAlert icon for the Admin tab.
- * 3. ADAPTIVE UI: Glassmorphism Tabs (Mobile) vs. Enterprise Sidebar (Desktop).
- * 4. STABILITY: Fail-safe identity engine prevents infinite loading on web.
+ * 1. CLEAN NAVIGATION: Removed redundant 'Profile' from Sidebar and Bottom Tabs.
+ * 2. DROPDOWN CENTRALIZATION: Identity Profile access restricted to Header Dropdown.
+ * 3. ADMIN GATE: Strict RBAC—Console only appears for verified ADMIN role.
+ * 4. CONTEXT STABILITY: Wrapped in FamilyProvider to fix 'useFamily' logic errors.
  */
 
 import { BlurView } from 'expo-blur';
@@ -35,15 +35,17 @@ import {
   View,
 } from 'react-native';
 
+// PROJECT IMPORTS
 import { BerryAssistant } from '@/components/ai/BerryAssistant';
 import GlobalHeader from '@/components/navigation/GlobalHeader';
 import { useAuth } from '@/context/auth';
+import { FamilyProvider } from '@/context/family';
 import { Theme } from '@/lib/shared/Theme';
 import { supabase } from '@/lib/supabase';
 import { NotificationService } from '@/services/NotificationService';
 
 export default function AppLayout() {
-  const { session, isLoading: authLoading } = useAuth();
+  const { session, isLoading: authLoading, profile: authProfile } = useAuth();
   const { width } = useWindowDimensions();
   const router = useRouter();
   const pathname = usePathname();
@@ -93,12 +95,13 @@ export default function AppLayout() {
     }
   }, [session?.user?.id]);
 
-  // --- 2. DYNAMIC RBAC NAVIGATION MEMO ---
+  // --- 2. DYNAMIC RBAC NAVIGATION MEMO (CLEANED) ---
   const menuItems = useMemo(() => {
     const role = profile?.role || 'MEMBER';
     const isPremium = ['ADMIN', 'PREMIUM_MEMBER'].includes(role);
     const isAdmin = role === 'ADMIN';
 
+    // REMOVED 'PROFILE' FROM PRIMARY SIDEBAR NAV
     const baseRoutes = [
       { name: 'index', icon: LayoutDashboard, label: 'Hub', path: '/(app)/' },
       { name: 'feeding', icon: Milk, label: 'Feeding', path: '/(app)/feeding' },
@@ -125,7 +128,6 @@ export default function AppLayout() {
       });
     }
 
-    // ADMIN-ONLY NAVIGATION ITEM
     if (isAdmin) {
       baseRoutes.push({
         name: 'admin',
@@ -140,7 +142,7 @@ export default function AppLayout() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/(auth)/sign-in' as any);
+    router.replace('/(auth)/sign-in');
   };
 
   if (authLoading || identityLoading) {
@@ -152,215 +154,206 @@ export default function AppLayout() {
     );
   }
 
-  if (!session) return <Redirect href={'/(auth)/sign-in' as any} />;
+  if (!session) return <Redirect href={'/(auth)/sign-in'} />;
 
-  // --- 3. MOBILE INTERFACE (GLASS TABS) ---
-  if (!isDesktop) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#020617' }}>
-        <GlobalHeader />
-
-        <Tabs
-          screenOptions={{
-            headerShown: false,
-            tabBarActiveTintColor: Theme.colors.primary,
-            tabBarInactiveTintColor: '#475569',
-            tabBarLabelStyle: styles.mobileLabelStyle,
-            tabBarStyle: styles.mobileTabBar,
-            tabBarBackground: () =>
-              Platform.OS !== 'web' ? (
-                <BlurView
-                  intensity={30}
-                  tint="dark"
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : (
-                <View
-                  style={[
-                    StyleSheet.absoluteFill,
-                    { backgroundColor: 'rgba(2, 6, 23, 0.95)' },
-                  ]}
-                />
-              ),
-          }}
-        >
-          <Tabs.Screen
-            name="index"
-            options={{
-              title: 'Hub',
-              tabBarIcon: ({ color }) => (
-                <LayoutDashboard color={color} size={22} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="feeding"
-            options={{
-              title: 'Feed',
-              tabBarIcon: ({ color }) => <Milk color={color} size={22} />,
-            }}
-          />
-          <Tabs.Screen
-            name="growth"
-            options={{
-              title: 'Growth',
-              tabBarIcon: ({ color }) => <Activity color={color} size={22} />,
-            }}
-          />
-          <Tabs.Screen
-            name="journal"
-            options={{
-              title: 'Journal',
-              tabBarIcon: ({ color }) => <FileText color={color} size={22} />,
-            }}
-          />
-
-          {/* SECURE ADMIN TAB: RENDERS ONLY FOR AUTHENTICATED ADMINS */}
-          <Tabs.Screen
-            name="admin"
-            options={{
-              title: 'Admin',
-              href: profile?.role === 'ADMIN' ? '/(app)/admin' : null, // Strict null if not admin
-              tabBarIcon: ({ color }) => (
-                <ShieldAlert color={color} size={22} />
-              ),
-            }}
-          />
-
-          <Tabs.Screen
-            name="settings"
-            options={{
-              title: 'Settings',
-              tabBarIcon: ({ color }) => <Settings color={color} size={22} />,
-            }}
-          />
-
-          <Tabs.Screen name="shared" options={{ href: null }} />
-          <Tabs.Screen name="notifications" options={{ href: null }} />
-          <Tabs.Screen name="support" options={{ href: null }} />
-          <Tabs.Screen name="health" options={{ href: null }} />
-        </Tabs>
-
-        <BerryAssistant />
-      </View>
-    );
-  }
-
-  // --- 4. DESKTOP INTERFACE (ENTERPRISE SIDEBAR) ---
   return (
-    <View style={styles.desktopRoot}>
-      <View style={styles.sidebar}>
-        <View style={styles.brandHeader}>
-          <View style={styles.brandIconWrapper}>
-            <Baby color="#020617" size={20} />
-          </View>
-          <Text style={styles.brandTitle}>Cradle</Text>
+    <FamilyProvider>
+      {!isDesktop ? (
+        /* MOBILE INTERFACE (GLASS TABS - NO REDUNDANT PROFILE TAB) */
+        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+          <GlobalHeader />
+          <Tabs
+            screenOptions={{
+              headerShown: false,
+              tabBarActiveTintColor: Theme.colors.primary,
+              tabBarInactiveTintColor: '#475569',
+              tabBarStyle: styles.mobileTabBar,
+              tabBarBackground: () =>
+                Platform.OS !== 'web' ? (
+                  <BlurView
+                    intensity={30}
+                    tint="dark"
+                    style={StyleSheet.absoluteFill}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      StyleSheet.absoluteFill,
+                      { backgroundColor: 'rgba(2, 6, 23, 0.95)' },
+                    ]}
+                  />
+                ),
+            }}
+          >
+            <Tabs.Screen
+              name="index"
+              options={{
+                title: 'Hub',
+                tabBarIcon: ({ color }) => (
+                  <LayoutDashboard color={color} size={22} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="feeding"
+              options={{
+                title: 'Feed',
+                tabBarIcon: ({ color }) => <Milk color={color} size={22} />,
+              }}
+            />
+            <Tabs.Screen
+              name="journal"
+              options={{
+                title: 'Journal',
+                tabBarIcon: ({ color }) => <FileText color={color} size={22} />,
+              }}
+            />
+            <Tabs.Screen
+              name="admin"
+              options={{
+                title: 'Admin',
+                href: profile?.role === 'ADMIN' ? '/(app)/admin' : null,
+                tabBarIcon: ({ color }) => (
+                  <ShieldAlert color={color} size={22} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="settings"
+              options={{
+                title: 'Settings',
+                tabBarIcon: ({ color }) => <Settings color={color} size={22} />,
+              }}
+            />
+
+            {/* HIDDEN LOGIC ROUTES (NOT ACCESSIBLE VIA TABS) */}
+            <Tabs.Screen name="profile" options={{ href: null }} />
+            <Tabs.Screen name="shared" options={{ href: null }} />
+            <Tabs.Screen name="notifications" options={{ href: null }} />
+            <Tabs.Screen name="support" options={{ href: null }} />
+            <Tabs.Screen name="health" options={{ href: null }} />
+            <Tabs.Screen name="growth" options={{ href: null }} />
+            <Tabs.Screen name="family" options={{ href: null }} />
+            <Tabs.Screen name="family-init" options={{ href: null }} />
+          </Tabs>
+          <BerryAssistant />
         </View>
+      ) : (
+        /* DESKTOP INTERFACE (ENTERPRISE SIDEBAR - NO REDUNDANT PROFILE LINK) */
+        <View style={styles.desktopRoot}>
+          <View style={styles.sidebar}>
+            <View style={styles.brandHeader}>
+              <View style={styles.brandIconWrapper}>
+                <Baby color="#020617" size={20} />
+              </View>
+              <Text style={styles.brandTitle}>Cradle</Text>
+            </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          style={{ flex: 1, padding: 16 }}
-        >
-          <Text style={styles.sidebarSectionLabel}>MONITORING</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 40 }}
+              style={{ flex: 1, padding: 16 }}
+            >
+              <Text style={styles.sidebarSectionLabel}>MONITORING</Text>
+              {menuItems.map((item) => {
+                const isActive = pathname.startsWith(item.path);
+                return (
+                  <TouchableOpacity
+                    key={item.name}
+                    onPress={() => router.push(item.path as any)}
+                    style={[
+                      styles.sidebarNavItem,
+                      isActive && styles.sidebarNavActive,
+                    ]}
+                  >
+                    <item.icon
+                      size={18}
+                      color={isActive ? Theme.colors.primary : '#94A3B8'}
+                    />
+                    <Text
+                      style={[
+                        styles.sidebarNavText,
+                        isActive && { color: '#FFF' },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {isActive && <View style={styles.activeIndicator} />}
+                  </TouchableOpacity>
+                );
+              })}
 
-          {menuItems.map((item) => {
-            const isActive = pathname.startsWith(item.path);
-            return (
+              <View style={styles.sidebarDivider} />
+              <Text style={styles.sidebarSectionLabel}>SYSTEM CORE</Text>
               <TouchableOpacity
-                key={item.name}
-                onPress={() => router.push(item.path as any)}
+                onPress={() => router.push('/(app)/settings' as any)}
                 style={[
                   styles.sidebarNavItem,
-                  isActive && styles.sidebarNavActive,
+                  pathname.includes('settings') && styles.sidebarNavActive,
                 ]}
               >
-                <item.icon
+                <Settings
                   size={18}
-                  color={isActive ? Theme.colors.primary : '#94A3B8'}
+                  color={
+                    pathname.includes('settings')
+                      ? Theme.colors.primary
+                      : '#94A3B8'
+                  }
                 />
-                <Text
-                  style={[styles.sidebarNavText, isActive && { color: '#FFF' }]}
-                >
-                  {item.label}
-                </Text>
-                {isActive && <View style={styles.activeIndicator} />}
+                <Text style={styles.sidebarNavText}>Account Settings</Text>
               </TouchableOpacity>
-            );
-          })}
 
-          <View style={styles.sidebarDivider} />
-          <Text style={styles.sidebarSectionLabel}>SYSTEM CORE</Text>
+              <View style={styles.proBadgeCard}>
+                <View style={styles.proBadgeHeader}>
+                  <Sparkles
+                    size={14}
+                    color={
+                      profile?.role === 'ADMIN'
+                        ? Theme.colors.primary
+                        : Theme.colors.secondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.proBadgeLabel,
+                      profile?.role === 'ADMIN' && {
+                        color: Theme.colors.primary,
+                      },
+                    ]}
+                  >
+                    {profile?.role === 'ADMIN' ? 'SYSTEM ADMIN' : 'PRO ACTIVE'}
+                  </Text>
+                </View>
+                <Text style={styles.proBadgeDesc}>
+                  {profile?.role === 'ADMIN'
+                    ? 'Core management modules unlocked.'
+                    : 'Intelligence is analyzing biometric trends.'}
+                </Text>
+              </View>
 
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/settings' as any)}
-            style={[
-              styles.sidebarNavItem,
-              pathname.includes('settings') && styles.sidebarNavActive,
-            ]}
-          >
-            <Settings
-              size={18}
-              color={
-                pathname.includes('settings') ? Theme.colors.primary : '#94A3B8'
-              }
-            />
-            <Text style={styles.sidebarNavText}>Account Settings</Text>
-          </TouchableOpacity>
-
-          <View style={styles.proBadgeCard}>
-            <View style={styles.proBadgeHeader}>
-              <Sparkles
-                size={14}
-                color={
-                  profile?.role === 'ADMIN'
-                    ? Theme.colors.primary
-                    : Theme.colors.secondary
-                }
-              />
-              <Text
-                style={[
-                  styles.proBadgeLabel,
-                  profile?.role === 'ADMIN' && { color: Theme.colors.primary },
-                ]}
+              <View style={styles.sidebarDivider} />
+              <TouchableOpacity
+                onPress={handleSignOut}
+                style={[styles.sidebarNavItem, { marginTop: 10 }]}
               >
-                {profile?.role === 'ADMIN'
-                  ? 'SYSTEM ADMIN'
-                  : profile?.role === 'PREMIUM_MEMBER'
-                  ? 'PRO ACTIVE'
-                  : 'UPGRADE CORE'}
-              </Text>
-            </View>
-            <Text style={styles.proBadgeDesc}>
-              {profile?.role === 'ADMIN'
-                ? 'Core management modules unlocked.'
-                : 'Intelligence is analyzing biometric trends.'}
-            </Text>
+                <LogOut size={18} color="#F87171" />
+                <Text style={[styles.sidebarNavText, { color: '#F87171' }]}>
+                  Terminate Session
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
 
-          <View style={styles.sidebarDivider} />
-
-          <TouchableOpacity
-            onPress={handleSignOut}
-            style={[styles.sidebarNavItem, { marginTop: 10 }]}
-          >
-            <LogOut size={18} color="#F87171" />
-            <Text style={[styles.sidebarNavText, { color: '#F87171' }]}>
-              Terminate Session
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      <View style={{ flex: 1 }}>
-        <GlobalHeader />
-        <View style={styles.mainViewport}>
-          <Slot />
+          <View style={{ flex: 1 }}>
+            <GlobalHeader />
+            <View style={styles.mainViewport}>
+              <Slot />
+            </View>
+          </View>
+          <BerryAssistant />
         </View>
-      </View>
-
-      <BerryAssistant />
-    </View>
+      )}
+    </FamilyProvider>
   );
 }
 
@@ -386,7 +379,6 @@ const styles = StyleSheet.create({
     height: 90,
     paddingBottom: Platform.OS === 'ios' ? 30 : 15,
   },
-  mobileLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 4 },
   desktopRoot: { flex: 1, backgroundColor: '#020617', flexDirection: 'row' },
   sidebar: {
     width: 300,
