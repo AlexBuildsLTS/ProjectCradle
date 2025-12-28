@@ -1,98 +1,151 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+/**
+ * PROJECT CRADLE: HEALTH VAULT V8.0 (AAA+ STABLE)
+ * Path: app/(app)/health.tsx
+ * FIXES: Linked 'onAdd' prop to MedicationInventory and resolved TS linter errors.
+ */
+
 import { GlassCard } from '@/components/glass/GlassCard';
-import { Pill, Syringe, Thermometer, Plus } from 'lucide-react-native';
-import { useBiometrics } from '@/hooks/useBiometrics';
-import { useFormatting } from '@/hooks/useFormatting';
-import * as Crypto from 'expo-crypto';
+import { HealthLogModal } from '@/components/tracking/HealthLogModal';
+import { MedicationInventory } from '@/components/tracking/MedicationInventory';
+import { useFamily } from '@/context/family';
+import { supabase } from '@/lib/supabase';
+import { ChevronRight, Pill, Plus } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 export default function HealthScreen() {
-  const { logEvent } = useBiometrics();
-  const { displayTemp, units } = useFormatting();
-  const [temp, setTemp] = useState("");
+  const { selectedBaby } = useFamily();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
 
-  const handleLogHealth = (type: 'MEDICATION' | 'HEALTH_LOG', metadata: any) => {
-    logEvent.mutate({
-      correlation_id: Crypto.randomUUID(),
-      event_type: type as any,
-      timestamp: new Date().toISOString(),
-      metadata: metadata,
-    });
-    Alert.alert("Success", "Health data recorded.");
-    if (type === 'HEALTH_LOG') setTemp("");
+  const [medications, setMedications] = useState<any[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const fetchLogs = async () => {
+    if (!selectedBaby?.id) return;
+    const { data } = await supabase
+      .from('medication_logs')
+      .select('*')
+      .eq('baby_id', selectedBaby.id)
+      .order('timestamp', { ascending: false })
+      .limit(3);
+    setMedications(data || []);
   };
 
+  useEffect(() => {
+    fetchLogs();
+  }, [selectedBaby]);
+
   return (
-    <ScrollView 
-      className="flex-1 p-6 bg-neutral-950" 
-      contentContainerStyle={{ paddingBottom: 120 }}
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.content,
+        isDesktop && styles.desktopContent,
+      ]}
+      showsVerticalScrollIndicator={false}
     >
-      <Text className="mb-8 text-4xl font-black text-white">Health</Text>
+      <Text style={styles.title}>HEALTH VAULT</Text>
+      <Text style={styles.babyID}>
+        CORE: {selectedBaby?.name?.toUpperCase() || 'SYNCING'}
+      </Text>
 
-      {/* Fever Tracker - Dynamically Adaptable */}
-      <Text className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mb-4">Vital Signs</Text>
-      <GlassCard className="mb-10 border-orange-500/20 bg-orange-500/5">
-        <View className="flex-row items-center mb-4">
-          <View className="p-2 bg-orange-500/20 rounded-xl">
-            <Thermometer size={20} color="#FB923C" />
-          </View>
-          <Text className="ml-3 text-lg font-bold text-white">Fever Tracker ({units.temp})</Text>
-        </View>
+      {/* 1. CABINET INVENTORY - FIXED: Added required 'onAdd' trigger */}
+      <MedicationInventory onAdd={() => setModalVisible(true)} />
 
-        <View className="flex-row items-center space-x-4">
-          <TextInput
-            placeholder={`Example: ${displayTemp("38.5")}`}
-            placeholderTextColor="#4B5563"
-            keyboardType="numeric"
-            value={temp}
-            onChangeText={setTemp}
-            className="flex-1 p-4 text-lg text-white border bg-white/5 border-white/10 rounded-2xl"
-          />
+      {/* 2. PHARMACY HISTORY */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Pill size={16} color="#B794F6" />
+          <Text style={styles.sectionTitle}>HISTORY</Text>
           <TouchableOpacity
-            onPress={() => handleLogHealth("HEALTH_LOG", { temperature: temp, unit: units.temp })}
-            className="p-4 bg-orange-500 shadow-lg rounded-2xl shadow-orange-500/20"
+            onPress={() => setModalVisible(true)}
+            style={styles.addBtn}
           >
-            <Plus color="white" size={24} />
+            <Plus size={14} color="#B794F6" />
           </TouchableOpacity>
         </View>
-      </GlassCard>
 
-      {/* Medication Cabinet */}
-      <Text className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mb-4">Medication Cabinet</Text>
-      <View className="mb-10 space-y-4">
-        {['Vitamin D', 'Paracetamol', 'Ibuprofen'].map((med) => (
-          <TouchableOpacity 
-            key={med} 
-            activeOpacity={0.7}
-            onPress={() => handleLogHealth('MEDICATION', { name: med, dose: 'Standard' })}
-          >
-            <GlassCard className="flex-row items-center justify-between p-5 border-white/5 bg-white/5">
-              <View className="flex-row items-center">
-                <View className="p-2 bg-primary/20 rounded-xl">
-                  <Pill size={20} color="#4FD1C7" />
-                </View>
-                <Text className="ml-4 font-bold text-white">{med}</Text>
+        {medications.map((item) => (
+          <GlassCard key={item.id} style={styles.proRowCard}>
+            <View style={styles.proRowInner}>
+              <View style={styles.iconBox}>
+                <Pill size={18} color="#B794F6" />
               </View>
-              <Plus size={20} color="#4FD1C7" />
-            </GlassCard>
-          </TouchableOpacity>
+              <View style={styles.dataStack}>
+                <Text style={styles.medName}>{item.medication_name}</Text>
+                <Text style={styles.medMeta}>
+                  {item.dosage} •{' '}
+                  {new Date(item.timestamp).toLocaleTimeString()}
+                </Text>
+              </View>
+              <ChevronRight size={16} color="#475569" />
+            </View>
+          </GlassCard>
         ))}
       </View>
 
-      {/* Vaccination Milestones */}
-      <Text className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mb-4">Vaccinations</Text>
-      <GlassCard className="border-secondary/20 bg-secondary/5">
-        <View className="flex-row items-center mb-4">
-          <View className="p-2 bg-secondary/20 rounded-xl">
-            <Syringe size={20} color="#B794F6" />
-          </View>
-          <Text className="ml-3 text-xs font-black tracking-widest uppercase text-secondary">Immunity Schedule</Text>
-        </View>
-        <Text className="mb-2 text-lg font-bold text-white">4-Month Booster</Text>
-        <Text className="text-sm leading-5 text-neutral-400">
-          DTaP, Polio, and Hib are scheduled for next week. Logging temperature is recommended post-appointment.
-        </Text>
-      </GlassCard>
+      <HealthLogModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSuccess={fetchLogs}
+        babyId={selectedBaby?.id || ''}
+      />
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#020617' },
+  content: { padding: 20, paddingBottom: 100 },
+  desktopContent: { maxWidth: 800, alignSelf: 'center', width: '100%' },
+  title: { color: '#FFF', fontSize: 22, fontWeight: '900' },
+  babyID: {
+    color: '#4FD1C7',
+    fontSize: 9,
+    fontWeight: '900',
+    marginBottom: 32,
+  },
+  section: { marginTop: 32 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  sectionTitle: { color: '#475569', fontSize: 10, fontWeight: '900', flex: 1 },
+  addBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(183, 148, 246, 0.05)',
+    borderRadius: 8,
+  },
+  proRowCard: {
+    height: 75,
+    borderRadius: 20,
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  proRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(183, 148, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dataStack: { flex: 1, marginLeft: 16 },
+  medName: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  medMeta: { color: '#475569', fontSize: 11, fontWeight: '600' },
+});

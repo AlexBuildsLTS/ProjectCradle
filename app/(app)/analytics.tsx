@@ -1,17 +1,15 @@
 /**
- * PROJECT CRADLE: ADVANCED ANALYTICS V1.0 (AAA+ TIER)
+ * PROJECT CRADLE: MASTER ANALYTICS CORE V26.0 (AAA+ FINAL)
  * Path: app/(app)/analytics.tsx
- * THEME: Obsidian (#020617) | Teal (#4FD1C7)
- * * MODULES:
- * 1. BIOMETRIC AGGREGATION: Joins care_events and sleep_logs for trend analysis.
- * 2. TOP-LEFT ICON ARCHITECTURE: Rigid CSS lock for premium card density.
- * 3. REAL-TIME CALCULATION: Sums milk volumes (ml) and sleep durations (hours).
- * 4. SCHEMA COMPLIANCE: Uses baby_id and user_id for strict RBAC sync.
+ * FIXES:
+ * 1. SLEEP EFFICIENCY ENGINE: Integrated duration-based logic vs 14h standard.
+ * 2. REAL-TIME HANDSHAKE: Fully synced with 'pumping_logs', 'sleep_logs', and 'growth_logs'.
+ * 3. PRO-ROW ARCHITECTURE: Icon far-left, data right, 0% label overlap.
+ * 4. PRODUCTION STABILITY: Direct styles and strict schema mapping for zero-crash builds.
  */
 
 import { useRouter } from 'expo-router';
 import {
-  Calendar,
   ChevronRight,
   Milk,
   Moon,
@@ -22,6 +20,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,203 +29,204 @@ import {
 } from 'react-native';
 
 // PROJECT IMPORTS
+import { GrowthChart } from '@/components/analytics/GrowthChart';
+import { MilestoneChecklist } from '@/components/analytics/MilestoneChecklist';
 import { GlassCard } from '@/components/glass/GlassCard';
 import { useAuth } from '@/context/auth';
 import { useFamily } from '@/context/family';
 import { supabase } from '@/lib/supabase';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function AnalyticsScreen() {
   const router = useRouter();
   const { selectedBaby } = useFamily();
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalMilk: 0,
-    avgSleep: 0,
+    sleepEfficiency: 0,
     latestWeight: '--',
     latestHeight: '--',
   });
 
-  // MODULE: DATA AGGREGATION ENGINE
-  const aggregateData = async () => {
-    if (!selectedBaby?.id || !user?.id) return;
+  // MODULE: PRODUCTION BIOMETRIC AGGREGATION ENGINE
+  const syncBiometricCore = async () => {
+    if (!selectedBaby?.id || !profile?.id) return;
     setLoading(true);
 
     try {
-      // 1. Fetch Feeding Volumes from care_events
-      const { data: feedingData } = await supabase
-        .from('care_events')
-        .select('metadata')
-        .eq('baby_id', selectedBaby.id)
-        .eq('event_type', 'feeding');
+      // 1. Live Feeding Aggregation (24H Window)
+      const { data: feeding } = await supabase
+        .from('pumping_logs')
+        .select('amount_ml')
+        .eq('user_id', profile.id)
+        .gte('timestamp', new Date(Date.now() - 86400000).toISOString());
 
       const milkTotal =
-        feedingData?.reduce(
-          (acc, curr) => acc + (curr.metadata?.amount_ml || 0),
+        feeding?.reduce(
+          (acc, curr) => acc + (Number(curr.amount_ml) || 0),
           0,
         ) || 0;
 
-      // 2. Fetch Sleep Durations from sleep_logs
-      const { data: sleepData } = await supabase
-        .from('sleep_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const totalSleepMins =
-        sleepData?.reduce((acc, curr) => {
-          if (!curr.end_time) return acc;
-          const start = new Date(curr.start_time).getTime();
-          const end = new Date(curr.end_time).getTime();
-          return acc + (end - start) / (1000 * 60);
-        }, 0) || 0;
-
-      // 3. Fetch Growth Milestones
-      const { data: growthData } = await supabase
+      // 2. Growth Handshake (Latest Metric)
+      const { data: growth } = await supabase
         .from('growth_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date_recorded', { ascending: false })
+        .select('weight_kg, height_cm')
+        .eq('baby_id', selectedBaby.id)
+        .order('timestamp', { ascending: false })
         .limit(1)
         .single();
 
+      // 3. Sleep Efficiency Aggregation Handshake
+      const { data: sleepData } = await supabase
+        .from('sleep_logs')
+        .select('start_time, end_time')
+        .eq('baby_id', selectedBaby.id)
+        .gte('start_time', new Date(Date.now() - 604800000).toISOString());
+
+      // CALCULATE DURATION VS STANDARD 14H INFANT REQUIREMENT
+      const totalMinutes =
+        sleepData?.reduce((acc, curr) => {
+          if (!curr.end_time) return acc;
+          return (
+            acc +
+            (new Date(curr.end_time).getTime() -
+              new Date(curr.start_time).getTime()) /
+              60000
+          );
+        }, 0) || 0;
+
+      const avgHours = totalMinutes / 7 / 60;
+      const efficiencyScore = Math.min(Math.round((avgHours / 14) * 100), 100);
+
       setStats({
         totalMilk: milkTotal,
-        avgSleep:
-          totalSleepMins > 0 ? Math.round((totalSleepMins / 60) * 10) / 10 : 0,
-        latestWeight: growthData?.weight_grams
-          ? `${growthData.weight_grams / 1000}kg`
-          : '--',
-        latestHeight: growthData?.height_cm
-          ? `${growthData.height_cm}cm`
-          : '--',
+        sleepEfficiency: efficiencyScore,
+        latestWeight: growth?.weight_kg ? `${growth.weight_kg}kg` : '--',
+        latestHeight: growth?.height_cm ? `${growth.height_cm}cm` : '--',
       });
-    } catch (e: any) {
-      console.error('[Analytics Engine] Sync Error:', e.message);
+    } catch (e) {
+      console.error('[Cradle Engine] Analytics Sync Error:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    aggregateData();
-  }, [selectedBaby]);
+    syncBiometricCore();
+  }, [selectedBaby?.id, profile?.id]);
 
   if (loading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color="#4FD1C7" size="large" />
-        <Text style={styles.loaderText}>SYNCING BIOMETRIC TRENDS...</Text>
+        <Text style={styles.loaderText}>CALCULATING EFFICIENCY...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 1. HEADER HUD */}
       <View style={styles.header}>
-        <Text style={styles.title}>ADVANCED ANALYTICS</Text>
+        <View>
+          <Text style={styles.title}>BIOMETRIC TRENDS</Text>
+          <Text style={styles.babySub}>
+            CORE SYNC: {selectedBaby?.name?.toUpperCase() || 'LOCKED'}
+          </Text>
+        </View>
         <View style={styles.badge}>
           <Sparkles size={12} color="#4FD1C7" />
-          <Text style={styles.badgeText}>BERRY AI INSIGHTS ACTIVE</Text>
+          <Text style={styles.badgeText}>AI ENGINE ACTIVE</Text>
         </View>
       </View>
 
-      {/* TOP-LEFT ICON CARD ARCHITECTURE */}
+      {/* 2. PRO-ROW STAT GRID */}
       <View style={styles.grid}>
-        {/* MILK VOLUME CARD */}
-        <GlassCard style={styles.statCard}>
-          <View style={styles.topLeftIcon}>
-            <Milk size={18} color="#4FD1C7" />
-          </View>
-          <Text style={styles.statLabel}>24H FEEDING</Text>
-          <Text style={styles.statValue}>
-            {stats.totalMilk}
-            <Text style={styles.unit}>ml</Text>
-          </Text>
-          <Text style={styles.statSub}>+12% from yesterday</Text>
-        </GlassCard>
-
-        {/* SLEEP PRESSURE CARD */}
-        <GlassCard style={styles.statCard}>
-          <View style={styles.topLeftIcon}>
-            <Moon size={18} color="#B794F6" />
-          </View>
-          <Text style={styles.statLabel}>AVG SLEEP</Text>
-          <Text style={styles.statValue}>
-            {stats.avgSleep}
-            <Text style={styles.unit}>hrs</Text>
-          </Text>
-          <Text style={styles.statSub}>Stable cycle detected</Text>
-        </GlassCard>
-
-        {/* GROWTH SCALE CARD */}
-        <GlassCard style={styles.statCard}>
-          <View style={styles.topLeftIcon}>
-            <Scale size={18} color="#9AE6B4" />
-          </View>
-          <Text style={styles.statLabel}>WEIGHT CORE</Text>
-          <Text style={styles.statValue}>{stats.latestWeight}</Text>
-          <Text style={styles.statSub}>92nd Percentile</Text>
-        </GlassCard>
-
-        {/* HEIGHT CORE CARD */}
-        <GlassCard style={styles.statCard}>
-          <View style={styles.topLeftIcon}>
-            <TrendingUp size={18} color="#4FD1C7" />
-          </View>
-          <Text style={styles.statLabel}>HEIGHT CORE</Text>
-          <Text style={styles.statValue}>{stats.latestHeight}</Text>
-          <Text style={styles.statSub}>Tracking on curve</Text>
-        </GlassCard>
+        <StatCard
+          label="24H FEEDING"
+          value={`${stats.totalMilk}ml`}
+          icon={Milk}
+          color="#4FD1C7"
+        />
+        <StatCard
+          label="SLEEP QUALITY"
+          value={`${stats.sleepEfficiency}%`}
+          icon={Moon}
+          color="#B794F6"
+        />
+        <StatCard
+          label="WEIGHT CORE"
+          value={stats.latestWeight}
+          icon={Scale}
+          color="#9AE6B4"
+        />
+        <StatCard
+          label="HEIGHT CORE"
+          value={stats.latestHeight}
+          icon={TrendingUp}
+          color="#4FD1C7"
+        />
       </View>
 
-      {/* VISUAL TREND CHART (AAA SVG MOCK) */}
-      <Text style={styles.sectionTitle}>SLEEP CYCLE TRENDS (7 DAYS)</Text>
+      {/* 3. BIOMETRIC VISUALIZATION */}
+      <Text style={styles.sectionLabel}>GROWTH TRAJECTORY</Text>
       <GlassCard style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Calendar size={14} color="#475569" />
-          <Text style={styles.chartDate}>DEC 21 - DEC 28</Text>
-        </View>
-        <View style={styles.barContainer}>
-          {[40, 70, 55, 90, 65, 80, 75].map((h, i) => (
-            <View key={i} style={[styles.bar, { height: h }]} />
-          ))}
-        </View>
-        <View style={styles.chartLabels}>
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((l, i) => (
-            <Text key={i} style={styles.chartLabelText}>
-              {l}
-            </Text>
-          ))}
-        </View>
+        <GrowthChart />
       </GlassCard>
 
-      {/* BERRY AI RECOMMENDATION */}
-      <TouchableOpacity activeOpacity={0.9} style={styles.aiAction}>
-        <GlassCard variant="teal" style={styles.innerAi}>
+      {/* 4. DEVELOPMENTAL CORE */}
+      <MilestoneChecklist />
+
+      {/* 5. AI HUD INSIGHT */}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => router.push('/(app)/berry-ai')}
+      >
+        <GlassCard style={styles.aiCard}>
           <View style={styles.aiHeader}>
-            <Sparkles size={16} color="#020617" />
+            <Sparkles size={18} color="#4FD1C7" />
             <Text style={styles.aiTitle}>BERRY AI RECOMMENDATION</Text>
           </View>
           <Text style={styles.aiDesc}>
-            Biometrics show increased sleep pressure at 10:15 AM. We recommend
-            moving the morning nap window 15 minutes earlier to avoid
-            overtiredness.
+            Trajectory suggests stable metabolic growth. Ensure last feed is 30m
+            prior to night cycles to maintain {stats.sleepEfficiency}%
+            efficiency.
           </Text>
-          <ChevronRight size={18} color="#020617" style={styles.aiChevron} />
+          <ChevronRight size={18} color="#4FD1C7" style={styles.chevron} />
         </GlassCard>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
+// SUB-COMPONENT: PRO-ROW STAT CARD
+const StatCard = ({ label, value, icon: Icon, color }: any) => (
+  <GlassCard style={styles.statCard}>
+    <View style={styles.proRow}>
+      <View style={[styles.iconBox, { borderColor: `${color}30` }]}>
+        <Icon size={22} color={color} />
+      </View>
+      <View style={styles.dataStack}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statValue}>{value}</Text>
+      </View>
+    </View>
+  </GlassCard>
+);
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
   content: {
     padding: 24,
-    paddingBottom: 100,
-    maxWidth: 1200,
+    paddingBottom: 120,
+    maxWidth: 1000,
     alignSelf: 'center',
     width: '100%',
   },
@@ -250,101 +250,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: 1 },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(79, 209, 199, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  badgeText: {
+  babySub: {
     color: '#4FD1C7',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 40 },
-  statCard: {
-    width: '48%',
-    minWidth: 160,
-    padding: 24,
-    borderRadius: 32,
-    position: 'relative',
-    minHeight: 160,
-    justifyContent: 'flex-end',
-  },
-  topLeftIcon: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  statLabel: {
-    color: '#475569',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  statValue: { color: '#FFF', fontSize: 28, fontWeight: '900' },
-  unit: { fontSize: 14, color: '#475569', marginLeft: 4 },
-  statSub: { color: '#4FD1C7', fontSize: 10, fontWeight: '700', marginTop: 8 },
-  sectionTitle: {
-    color: 'rgba(148, 163, 184, 0.4)',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
-    marginBottom: 20,
+    marginTop: 4,
   },
-  chartCard: { padding: 32, borderRadius: 40, marginBottom: 32 },
-  chartHeader: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 32,
+    gap: 6,
+    backgroundColor: 'rgba(79, 209, 199, 0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.1)',
   },
-  chartDate: { color: '#475569', fontSize: 11, fontWeight: '800' },
-  barContainer: {
+  badgeText: { color: '#4FD1C7', fontSize: 9, fontWeight: '900' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  statCard: {
+    width: SCREEN_WIDTH > 800 ? '48.5%' : '100%',
+    height: 100,
+    borderRadius: 24,
+    padding: 0,
+  },
+  proRow: {
+    flex: 1,
     flexDirection: 'row',
-    height: 120,
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  bar: { width: 12, backgroundColor: '#4FD1C7', borderRadius: 6, opacity: 0.8 },
-  chartLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingHorizontal: 10,
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chartLabelText: { color: '#475569', fontSize: 10, fontWeight: '900' },
-  aiAction: { width: '100%', marginBottom: 40 },
-  innerAi: { padding: 32, borderRadius: 32, position: 'relative' },
+  dataStack: { flex: 1, marginLeft: 20 },
+  statLabel: {
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  statValue: { color: '#FFF', fontSize: 22, fontWeight: '900' },
+  sectionLabel: {
+    color: 'rgba(148, 163, 184, 0.2)',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginTop: 48,
+    marginBottom: 20,
+  },
+  chartCard: { padding: 0, borderRadius: 32, overflow: 'hidden' },
+  aiCard: {
+    marginTop: 40,
+    padding: 24,
+    borderRadius: 32,
+    borderColor: 'rgba(79, 209, 199, 0.2)',
+    borderWidth: 1,
+  },
   aiHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 12,
   },
   aiTitle: {
-    color: '#020617',
+    color: '#4FD1C7',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
   aiDesc: {
-    color: '#020617',
+    color: '#94A3B8',
     fontSize: 14,
     lineHeight: 22,
     fontWeight: '600',
     paddingRight: 40,
   },
-  aiChevron: { position: 'absolute', right: 32, top: '50%' },
+  chevron: { position: 'absolute', right: 24, top: '50%', marginTop: -9 },
 });

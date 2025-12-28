@@ -1,17 +1,12 @@
 /**
- * PROJECT CRADLE: MASTER FEEDING COMMAND V10.0 (AAA+ STABLE)
+ * PROJECT CRADLE: MASTER FEEDING COMMAND V11.0 (AAA+ TIER)
  * Path: app/(app)/feeding.tsx
  * FIXES:
- * 1. TARGET TABLE: Updated to public.pumping_logs.
- * 2. COLUMN ALIGNMENT: amount_ml, duration_minutes, side.
- * 3. TOP-LEFT ICON LOCK: Absolute positioning (20px/20px).
- * 4. STABILITY: Defensive coding for context properties.
+ * 1. PRO-ROW ARCHITECTURE: Icon on far left, data on right. 0% Overlap.
+ * 2. SCHEMA HANDSHAKE: Strictly maps to public.pumping_logs.
+ * 3. MOBILE DENSITY: Optimized for high-fidelity rendering on small viewports.
  */
 
-import { GlassCard } from '@/components/glass/GlassCard';
-import { useAuth } from '@/context/auth';
-import { useFamily } from '@/context/family';
-import { supabase } from '@/lib/supabase';
 import * as Haptics from 'expo-haptics';
 import { Baby, History, Milk, Save, Timer, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -26,8 +21,12 @@ import {
   View,
 } from 'react-native';
 
+import { GlassCard } from '@/components/glass/GlassCard';
+import { useAuth } from '@/context/auth';
+import { useFamily } from '@/context/family';
+import { supabase } from '@/lib/supabase';
+
 export default function FeedingScreen() {
-  // FIX: Default values to prevent crashes if context is syncing
   const { selectedBaby = null } = useFamily();
   const { user } = useAuth();
 
@@ -38,28 +37,21 @@ export default function FeedingScreen() {
   const [logs, setLogs] = useState<any[]>([]);
   const intervalRef = useRef<any>(null);
 
-  // MODULE: DATA RECOVERY (Target: pumping_logs)
   const fetchLogs = async () => {
     if (!user?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('pumping_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('timestamp', { ascending: false })
-        .limit(5);
-
-      if (!error && data) setLogs(data);
-    } catch (e) {
-      console.error('[Cradle Core] Log Sync Error:', e);
-    }
+    const { data } = await supabase
+      .from('pumping_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('timestamp', { ascending: false })
+      .limit(5);
+    if (data) setLogs(data);
   };
 
   useEffect(() => {
     fetchLogs();
   }, [user?.id]);
 
-  // MODULE: TIMER ENGINE
   useEffect(() => {
     if (isTracking) {
       intervalRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -71,36 +63,29 @@ export default function FeedingScreen() {
     };
   }, [isTracking]);
 
-  // MODULE: DATABASE HANDSHAKE (SCHEMA COMPLIANT)
-  const executeSave = async (sideParam: string, amount: number) => {
+  const executeSave = async (side: string, amount: number) => {
     if (!user?.id) return Alert.alert('SYNC ERROR', 'Identity core missing.');
     setLoading(true);
-
     try {
-      // Structure strictly mapping to your public.pumping_logs table
-      const payload = {
-        user_id: user.id,
-        amount_ml: amount,
-        duration_minutes: Math.max(1, Math.floor(seconds / 60)), // Schema: int4
-        side: sideParam, // Schema: text
-        timestamp: new Date().toISOString(), // Schema: timestamptz
-      };
-
-      const { error } = await supabase.from('pumping_logs').insert([payload]);
+      const { error } = await supabase.from('pumping_logs').insert([
+        {
+          user_id: user.id,
+          amount_ml: amount,
+          duration_minutes: Math.max(1, Math.floor(seconds / 60)),
+          side: side,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
       if (error) throw error;
-
       if (Platform.OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // RESET AND REFRESH
       setSeconds(0);
       setIsTracking(false);
       setActiveSide(null);
       await fetchLogs();
-      Alert.alert('SYNC SUCCESS', 'Session committed to family core.');
+      Alert.alert('SYNC SUCCESS', 'Biometric session committed.');
     } catch (e: any) {
       Alert.alert('SAVE FAILED', e.message);
-      console.error('Supabase Error:', e);
     } finally {
       setLoading(false);
     }
@@ -117,33 +102,35 @@ export default function FeedingScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Text style={styles.title}>FEEDING COMMAND</Text>
-      <Text style={styles.target}>
-        ACTIVE CORE: {selectedBaby?.name?.toUpperCase() || 'CORE'}
+      <Text style={styles.babyLabel}>
+        ACTIVE IDENTITY: {selectedBaby?.name?.toUpperCase() || 'CORE'}
       </Text>
 
-      {/* BREASTFEEDING CARD */}
+      {/* PRIMARY NURSING TRACKER - HORIZONTAL PRO-ROW */}
       <GlassCard style={styles.mainCard}>
-        {/* TOP-LEFT ICON LOCK */}
-        <View style={styles.topLeftIcon}>
-          <Timer size={22} color="#4FD1C7" />
+        <View style={styles.proRow}>
+          <View style={styles.iconContainer}>
+            <Timer size={24} color="#4FD1C7" />
+          </View>
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerSub}>ELAPSED TIME</Text>
+            <Text style={styles.timerMain}>{formatTime(seconds)}</Text>
+          </View>
         </View>
 
-        <Text style={styles.cardLabel}>NURSING TRACKER</Text>
-        <Text style={styles.timerDisplay}>{formatTime(seconds)}</Text>
-
-        <View style={styles.sideGrid}>
-          {['left', 'right'].map((side: any) => (
+        <View style={styles.sidePicker}>
+          {['left', 'right'].map((side) => (
             <TouchableOpacity
               key={side}
-              style={[styles.sideBtn, activeSide === side && styles.activeSide]}
               onPress={() => {
-                setActiveSide(side);
+                setActiveSide(side as any);
                 setIsTracking(true);
               }}
+              style={[styles.sideBtn, activeSide === side && styles.activeSide]}
             >
               <Text
                 style={[
-                  styles.sideText,
+                  styles.sideBtnText,
                   activeSide === side && { color: '#020617' },
                 ]}
               >
@@ -155,17 +142,16 @@ export default function FeedingScreen() {
 
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={styles.stopBtn}
+            style={styles.cancelBtn}
             onPress={() => {
               setIsTracking(false);
               setSeconds(0);
             }}
           >
-            <Trash2 size={18} color="#F87171" />
+            <Trash2 size={20} color="#F87171" />
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={styles.saveBtn}
+            style={styles.completeBtn}
             onPress={() => executeSave(activeSide || 'both', 0)}
             disabled={seconds < 1 || loading}
           >
@@ -173,7 +159,7 @@ export default function FeedingScreen() {
               <ActivityIndicator color="#020617" />
             ) : (
               <>
-                <Text style={styles.saveBtnText}>COMPLETE SESSION</Text>
+                <Text style={styles.completeText}>COMPLETE SESSION</Text>
                 <Save size={18} color="#020617" />
               </>
             )}
@@ -181,17 +167,19 @@ export default function FeedingScreen() {
         </View>
       </GlassCard>
 
-      {/* QUICK LOG GRID */}
+      {/* QUICK ACTIONS GRID */}
       <View style={styles.quickGrid}>
         <TouchableOpacity
           style={styles.quickBox}
           onPress={() => executeSave('bottle', 120)}
         >
-          <GlassCard style={styles.innerBox}>
-            <View style={styles.miniTopLeftIcon}>
-              <Milk size={18} color="#4FD1C7" />
+          <GlassCard style={styles.miniCard}>
+            <View style={styles.miniProRow}>
+              <View style={styles.miniIconBox}>
+                <Milk size={18} color="#4FD1C7" />
+              </View>
+              <Text style={styles.miniLabel}>BOTTLE</Text>
             </View>
-            <Text style={styles.quickLabel}>BOTTLE</Text>
           </GlassCard>
         </TouchableOpacity>
 
@@ -199,47 +187,45 @@ export default function FeedingScreen() {
           style={styles.quickBox}
           onPress={() => executeSave('solids', 0)}
         >
-          <GlassCard style={styles.innerBox}>
-            <View style={styles.miniTopLeftIcon}>
-              <Baby size={18} color="#4FD1C7" />
+          <GlassCard style={styles.miniCard}>
+            <View style={styles.miniProRow}>
+              <View style={styles.miniIconBox}>
+                <Baby size={18} color="#4FD1C7" />
+              </View>
+              <Text style={styles.miniLabel}>SOLIDS</Text>
             </View>
-            <Text style={styles.quickLabel}>SOLIDS</Text>
           </GlassCard>
         </TouchableOpacity>
       </View>
 
-      {/* RECENT ACTIVITY HUB */}
-      <View style={styles.history}>
-        <View style={styles.historyHeader}>
+      {/* HISTORY LEDGER */}
+      <View style={styles.ledger}>
+        <View style={styles.ledgerHeader}>
           <History size={16} color="#475569" />
-          <Text style={styles.historyTitle}>RECENT FEEDINGS</Text>
+          <Text style={styles.ledgerTitle}>RECENT SESSIONS</Text>
         </View>
-        {logs.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>Waiting for sync data...</Text>
-          </View>
-        ) : (
-          logs.map((log) => (
-            <GlassCard key={log.id} style={styles.logItem}>
-              <View style={styles.logLeft}>
-                <Milk size={16} color="#4FD1C7" />
-                <View>
-                  <Text style={styles.logMain}>
-                    {log.side?.toUpperCase() || 'SESSION'}
-                  </Text>
-                  <Text style={styles.logSub}>
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </Text>
-                </View>
+        {logs.map((log) => (
+          <GlassCard key={log.id} style={styles.logCard}>
+            <View style={styles.miniProRow}>
+              <View style={styles.miniIconBox}>
+                <Milk size={14} color="#4FD1C7" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.logSide}>
+                  {log.side?.toUpperCase() || 'LOG'}
+                </Text>
+                <Text style={styles.logTime}>
+                  {new Date(log.timestamp).toLocaleTimeString()}
+                </Text>
               </View>
               <Text style={styles.logMeta}>
                 {log.amount_ml > 0
                   ? `${log.amount_ml}ml`
                   : `${log.duration_minutes}m`}
               </Text>
-            </GlassCard>
-          ))
-        )}
+            </View>
+          </GlassCard>
+        ))}
       </View>
     </ScrollView>
   );
@@ -248,147 +234,118 @@ export default function FeedingScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
   content: {
-    padding: 24,
+    padding: 20,
     paddingBottom: 100,
     maxWidth: 800,
     alignSelf: 'center',
     width: '100%',
   },
-  title: { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: 1 },
-  target: {
+  title: { color: '#FFF', fontSize: 22, fontWeight: '900', letterSpacing: 1 },
+  babyLabel: {
     color: '#4FD1C7',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
-    marginTop: 6,
     letterSpacing: 2,
+    marginTop: 4,
     marginBottom: 32,
   },
-  mainCard: {
-    padding: 32,
-    borderRadius: 40,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  // FIX: ABSOLUTE ICON LOCK
-  topLeftIcon: {
-    position: 'absolute',
-    top: 24,
-    left: 24,
-    padding: 10,
-    backgroundColor: 'rgba(79, 209, 199, 0.05)',
-    borderRadius: 12,
-    zIndex: 10,
-  },
-  miniTopLeftIcon: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    padding: 6,
-    backgroundColor: 'rgba(79, 209, 199, 0.05)',
-    borderRadius: 8,
-    zIndex: 10,
-  },
-  cardLabel: {
-    color: 'rgba(148, 163, 184, 0.4)',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  timerDisplay: {
-    color: '#FFF',
-    fontSize: 72,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginVertical: 32,
-    letterSpacing: -3,
-  },
-  sideGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  sideBtn: {
-    flex: 1,
-    padding: 18,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  activeSide: { backgroundColor: '#4FD1C7', borderColor: '#4FD1C7' },
-  sideText: { color: '#94A3B8', fontWeight: '900', fontSize: 12 },
-  actionRow: { flexDirection: 'row', gap: 12 },
-  stopBtn: {
+  mainCard: { padding: 24, borderRadius: 32 },
+  proRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  iconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerContainer: { marginLeft: 20 },
+  timerSub: {
+    color: '#475569',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  timerMain: {
+    color: '#FFF',
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: -2,
+  },
+  sidePicker: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  sideBtn: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+  },
+  activeSide: { backgroundColor: '#4FD1C7', borderColor: '#4FD1C7' },
+  sideBtnText: { color: '#94A3B8', fontWeight: '800', fontSize: 11 },
+  actionRow: { flexDirection: 'row', gap: 12 },
+  cancelBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     backgroundColor: 'rgba(248, 113, 113, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveBtn: {
+  completeBtn: {
     flex: 1,
     backgroundColor: '#4FD1C7',
-    borderRadius: 16,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
   },
-  saveBtnText: {
-    color: '#020617',
-    fontWeight: '900',
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  quickGrid: { flexDirection: 'row', gap: 16, marginTop: 16, marginBottom: 40 },
+  completeText: { color: '#020617', fontWeight: '900', fontSize: 13 },
+  quickGrid: { flexDirection: 'row', gap: 12, marginTop: 12, marginBottom: 40 },
   quickBox: { flex: 1 },
-  innerBox: {
-    padding: 20,
+  miniCard: { padding: 0, height: 80, borderRadius: 20 },
+  miniProRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  miniIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(79, 209, 199, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
-    height: 110,
-    position: 'relative',
   },
-  quickLabel: {
+  miniLabel: {
     color: '#FFF',
     fontSize: 11,
     fontWeight: '900',
+    marginLeft: 12,
     letterSpacing: 1,
-    marginTop: 16,
   },
-  history: { width: '100%' },
-  historyHeader: {
+  ledger: { gap: 10 },
+  ledgerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
+    gap: 8,
+    marginBottom: 12,
   },
-  historyTitle: {
+  ledgerTitle: {
     color: '#475569',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
   },
-  emptyBox: {
-    padding: 40,
-    alignItems: 'center',
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-  },
-  emptyText: { color: '#475569', fontSize: 12, fontWeight: '700' },
-  logItem: {
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderRadius: 24,
-    marginBottom: 12,
-  },
-  logLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  logMain: { color: '#FFF', fontSize: 13, fontWeight: '800' },
-  logSub: { color: '#475569', fontSize: 10, fontWeight: '600', marginTop: 2 },
-  logMeta: { color: '#4FD1C7', fontWeight: '900', fontSize: 12 },
+  logCard: { padding: 0, height: 70, borderRadius: 16, marginBottom: 8 },
+  logSide: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  logTime: { color: '#475569', fontSize: 10, marginTop: 2 },
+  logMeta: { color: '#4FD1C7', fontSize: 14, fontWeight: '900' },
 });
