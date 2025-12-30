@@ -1,61 +1,65 @@
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import React, { memo } from 'react';
+import { View, Text } from 'react-native';
+import { Theme } from '../../lib/shared/Theme';
 
 /**
  * PROJECT CRADLE: HIGH-FIDELITY GLASS BADGE
- * Purpose: Used for User Names (Johan), Baby Status, and AI Indicators.
+ * Purpose: Used for Roles, Such as Member, Premium, Support, Admin
+ *
+ * Improvements:
+ * - Switched to NativeWind for consistency with project styling
+ * - Implemented 'outline' variant
+ * - Added React.memo for performance optimization
+ * - Added error handling for invalid labels
+ * - Used theme colors for maintainability
  */
 
 interface BadgeProps {
   label: string;
   variant?: 'primary' | 'secondary' | 'outline';
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  className?: string; // For additional custom styling with NativeWind
 }
 
-export const Badge = ({ label, variant = 'primary', style, textStyle }: BadgeProps) => {
-  const isSecondary = variant === 'secondary';
-  
+const BadgeComponent = ({ label, variant = 'primary', className = '' }: BadgeProps) => {
+  // Error handling: Render nothing for invalid labels
+  if (!label || typeof label !== 'string') {
+    return null;
+  }
+
+  // Determine styles based on variant using theme colors
+  let containerClasses = 'self-start justify-center items-center px-3 py-1.5 rounded-xl border ';
+  let textClasses = 'text-xs font-black uppercase tracking-wider ';
+
+  switch (variant) {
+    case 'primary':
+      containerClasses += `bg-[${Theme.colors.roles.MEMBER.glass}] border-[${Theme.colors.roles.MEMBER.main}]/20`;
+      textClasses += `text-[${Theme.colors.roles.MEMBER.main}]`;
+      break;
+    case 'secondary':
+      containerClasses += `bg-[${Theme.colors.roles.PREMIUM_MEMBER.glass}] border-[${Theme.colors.roles.PREMIUM_MEMBER.main}]/20`;
+      textClasses += `text-[${Theme.colors.roles.PREMIUM_MEMBER.main}]`;
+      break;
+    case 'outline':
+      containerClasses += 'bg-transparent border-white/10';
+      textClasses += 'text-white';
+      break;
+    default:
+      // Fallback to primary
+      containerClasses += `bg-[${Theme.colors.roles.MEMBER.glass}] border-[${Theme.colors.roles.MEMBER.main}]/20`;
+      textClasses += `text-[${Theme.colors.roles.MEMBER.main}]`;
+  }
+
+  // Append custom className
+  containerClasses += ` ${className}`;
+
   return (
-    <View style={[
-      styles.badgeContainer, 
-      isSecondary && styles.secondaryVariant,
-      style
-    ]}>
-      <Text style={[
-        styles.badgeText, 
-        isSecondary && styles.secondaryText,
-        textStyle
-      ]}>
+    <View className={containerClasses}>
+      <Text className={textClasses}>
         {label.toUpperCase()}
       </Text>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  badgeContainer: {
-    backgroundColor: 'rgba(79, 209, 199, 0.1)', // Soft Teal Translucency
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 209, 199, 0.2)',
-    alignSelf: 'flex-start',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryVariant: {
-    backgroundColor: 'rgba(183, 148, 246, 0.1)', // Soft Lavender Translucency
-    borderColor: 'rgba(183, 148, 246, 0.2)',
-  },
-  badgeText: {
-    color: '#4FD1C7', // Primary Teal
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  secondaryText: {
-    color: '#B794F6', // Secondary Lavender
-  },
-});
+// Wrap with React.memo for performance optimization
+export const Badge = memo(BadgeComponent);

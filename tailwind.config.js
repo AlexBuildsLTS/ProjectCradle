@@ -29,7 +29,7 @@ module.exports = {
           200: "#CBD5E0",
           800: "#1E293B",
           900: "#0F172A",
-          950: "#020617", // Obsidian Base
+          950: "#201a36", // Obsidian Base
         },
       },
       // Custom Glassmorphism Blur Intensities

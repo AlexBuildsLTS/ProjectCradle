@@ -1,7 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 // Standardized alias path to your mobile directory
-import { triggerLightImpact } from '@/app/(app)/(mobile)/MobileHaptics';
+import Haptics from '@mhpdev/react-native-haptics';
+ 
 
 interface ButtonProps {
   label: string;
@@ -21,7 +22,7 @@ export const Button = ({
   const handlePress = () => {
     // If the file exists, this provides tactile feedback
     try {
-      triggerLightImpact();
+      Haptics.impact('light');
     } catch (e) {
       /* Haptics not supported */
     }

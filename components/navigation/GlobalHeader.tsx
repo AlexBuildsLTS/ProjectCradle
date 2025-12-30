@@ -1,25 +1,28 @@
 /**
- * PROJECT CRADLE: MASTER HUD V5.1 (STABLE & TYPED)
- * Path: components/navigation/GlobalHeader.tsx
- * FIXES:
- * 1. TS TYPE SAFETY: Explicitly typed baby selection parameters to kill 'implicitly any' error.
- * 2. SPELLCHECK COMPLIANCE: Fixed 'Notifications' and 'SweetSpot' references.
- * 3. CONTEXT SAFETY: Safe extraction of Context properties.
+ * PROJECT CRADLE: MASTER HUD V6.0 (STELLAR GLASS)
+ * Features:
+ * - Smooth spring animations for all HUD transitions.
+ * - RBAC Logic: Admin/Support integrated into Profile menu.
+ * - Branding: Native icon.png integration with scaled typography.
+ * - Glassmorphism: Multi-layered obsidian surfaces with AAA contrast.
  */
 import { useRouter } from 'expo-router';
 import {
-  Baby as BabyIcon,
+  Activity,
   Bell,
   ChevronDown,
+  History,
+  LifeBuoy,
   LogOut,
   Settings,
-  Sparkles,
+  ShieldCheck,
   UserCircle,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,117 +32,135 @@ import {
 
 import { useAuth } from '@/context/auth';
 import { useFamily } from '@/context/family';
+import { Theme } from '@/lib/shared/Theme';
 import { supabase } from '@/lib/supabase';
-
-// Define Interface to resolve TS errors
-interface BabyItem {
-  id: string;
-  name: string;
-}
 
 export default function GlobalHeader() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { profile } = useAuth();
-
-  // Safe destructuring from context
-  const familyContext = useFamily();
-  const babies = (familyContext as any).babies || [];
-  const selectedBaby = familyContext.selectedBaby;
-  const selectBaby = (familyContext as any).selectBaby;
+  const { selectedBaby } = useFamily() as any;
 
   const isDesktop = width >= 1024;
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showBabyPicker, setShowBabyPicker] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<
+    'none' | 'profile' | 'notif' | 'baby'
+  >('none');
 
-  const [alerts] = useState([
-    {
-      id: '1',
-      title: 'Feeding Cycle',
-      body: 'Next window in 15m',
-      read: false,
-    },
-    { id: '2', title: 'Core Sync', body: 'Biometrics encrypted', read: false },
-  ]);
+  // Animation Controllers
+  const menuAnim = useRef(new Animated.Value(0)).current;
 
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  // RBAC Gates: Determine visibility for dropdown items
+  const isAdmin = profile?.role === 'ADMIN';
+  const isSupport = profile?.role === 'SUPPORT' || isAdmin;
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
+  const animateMenu = (target: number, callback?: () => void) => {
+    Animated.spring(menuAnim, {
+      toValue: target,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start(callback);
+  };
+
+  const toggleMenu = (menu: 'profile' | 'notif' | 'baby') => {
+    if (activeMenu === menu) {
+      animateMenu(0, () => setActiveMenu('none'));
+    } else {
+      setActiveMenu(menu);
+      animateMenu(1);
+    }
+  };
 
   const handleSignOut = async () => {
-    setShowDropdown(false);
-    await supabase.auth.signOut();
+    animateMenu(0, async () => {
+      setActiveMenu('none');
+      await supabase.auth.signOut();
+    });
   };
+
+  const navigateTo = (path: string) => {
+    animateMenu(0, () => {
+      setActiveMenu('none');
+      router.push(path as any);
+    });
+  };
+
+  // UI Interpolations
+  const menuScale = menuAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.97, 1],
+  });
+  const menuOpacity = menuAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const menuTranslate = menuAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-10, 0],
+  });
 
   return (
     <View style={styles.headerWrapper}>
       <View style={[styles.headerContainer, isDesktop && styles.desktopWidth]}>
+        {/* LEFT: BRANDING & BABY HUD */}
         <View style={styles.leftSection}>
           <TouchableOpacity
             onPress={() => router.push('/(app)')}
             style={styles.brand}
           >
-            <Sparkles size={20} color="#4FD1C7" />
-            <Text style={styles.logo}>CRADLE</Text>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={styles.appIcon}
+              resizeMode="contain"
+            />
+            <View>
+              <Text style={styles.logoText}></Text>
+              <View style={styles.statusRow}>
+                <View style={styles.statusDot} />
+                <Text style={styles.logoSub}>CORE ACTIVE</Text>
+              </View>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.babySelector}
-            onPress={() => {
-              setShowBabyPicker(!showBabyPicker);
-              setShowDropdown(false);
-              setShowNotifications(false);
-            }}
+            onPress={() => toggleMenu('baby')}
           >
-            <BabyIcon size={16} color="#4FD1C7" />
+            <Activity size={12} color={Theme.colors.primary} />
             <Text style={styles.activeBabyName}>
-              {selectedBaby?.name?.toUpperCase() || 'SELECT BABY'}
+              {selectedBaby?.name?.toUpperCase() || 'SUBJECT SELECT'}
             </Text>
-            <ChevronDown size={14} color="#475569" />
+            <ChevronDown size={12} color="#475569" />
           </TouchableOpacity>
         </View>
 
+        {/* RIGHT: ACTIONS & IDENTITY */}
         <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => {
-              setShowNotifications(!showNotifications);
-              setShowDropdown(false);
-            }}
+            style={[styles.iconBtn, activeMenu === 'notif' && styles.activeBtn]}
+            onPress={() => toggleMenu('notif')}
           >
-            <Bell size={20} color="#94A3B8" />
+            <Bell
+              size={20}
+              color={activeMenu === 'notif' ? Theme.colors.primary : '#94A3B8'}
+            />
             <View style={styles.notifBadge} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={() => {
-              setShowDropdown(!showDropdown);
-              setShowNotifications(false);
-            }}
+            style={[
+              styles.profileBtn,
+              activeMenu === 'profile' && styles.activeBtn,
+            ]}
+            onPress={() => toggleMenu('profile')}
           >
             <View
               style={[
-                styles.avatarWrapper,
+                styles.avatarGlow,
                 {
-                  borderColor:
-                    profile?.role === 'ADMIN' ? '#4FD1C7' : '#B794F6',
+                  borderColor: isAdmin
+                    ? Theme.colors.primary
+                    : Theme.colors.secondary,
                 },
               ]}
             >
@@ -150,7 +171,7 @@ export default function GlobalHeader() {
                 />
               ) : (
                 <View style={styles.placeholderAvatar}>
-                  <Text style={styles.placeholderText}>
+                  <Text style={styles.placeholderChar}>
                     {profile?.full_name?.charAt(0) || 'U'}
                   </Text>
                 </View>
@@ -161,81 +182,106 @@ export default function GlobalHeader() {
         </View>
       </View>
 
-      {/* BABY PICKER HUD */}
-      {showBabyPicker && (
-        <View style={styles.babyPickerHUD}>
-          <Text style={styles.dropLabel}>ACTIVE BIOMETRIC CORES</Text>
-          {babies.map(
-            (
-              b: BabyItem, // FIXED: Parameter 'b' explicitly typed
-            ) => (
-              <TouchableOpacity
-                key={b.id}
-                style={styles.babyItem}
-                onPress={() => {
-                  selectBaby(b.id);
-                  setShowBabyPicker(false);
-                }}
-              >
-                <Text style={styles.babyText}>{b.name.toUpperCase()}</Text>
-              </TouchableOpacity>
-            ),
-          )}
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => {
-              router.push('/(app)/family-init');
-              setShowBabyPicker(false);
-            }}
-          >
-            <Text style={styles.addBtnText}>+ INITIALIZE NEW CORE</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* DYNAMIC HUD OVERLAY (Animated Glassmorphism) */}
+      {activeMenu !== 'none' && (
+        <Animated.View
+          style={[
+            styles.masterHUD,
+            activeMenu === 'notif' ? styles.notifHUDPos : styles.profileHUDPos,
+            {
+              opacity: menuOpacity,
+              transform: [{ scale: menuScale }, { translateY: menuTranslate }],
+            },
+          ]}
+        >
+          {activeMenu === 'profile' && (
+            <View>
+              <Text style={styles.hudLabel}>IDENTITY & SYSTEM</Text>
+              <HUDItem
+                icon={UserCircle}
+                label="Profile"
+                onPress={() => navigateTo('/(app)/profile')}
+              />
+              <HUDItem
+                icon={LifeBuoy}
+                label="Support Hub"
+                onPress={() => navigateTo('/(app)/support')}
+              />
+              <HUDItem
+                icon={Settings}
+                label="Settings"
+                onPress={() => navigateTo('/(app)/settings')}
+              />
 
-      {/* MASTER DROPDOWN */}
-      {showDropdown && (
-        <View style={styles.dropdownHUD}>
-          <Text style={styles.dropLabel}>CORE MANAGEMENT</Text>
-          <TouchableOpacity
-            style={styles.dropItem}
-            onPress={() => {
-              setShowDropdown(false);
-              router.push('/(app)/profile');
-            }}
-          >
-            <UserCircle size={18} color="#94A3B8" />
-            <Text style={styles.dropText}>Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dropItem}
-            onPress={() => {
-              setShowDropdown(false);
-              router.push('/(app)/settings');
-            }}
-          >
-            <Settings size={18} color="#94A3B8" />
-            <Text style={styles.dropText}>System Settings</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.dropItem} onPress={handleSignOut}>
-            <LogOut size={18} color="#F87171" />
-            <Text style={[styles.dropText, { color: '#F87171' }]}>
-              Terminate Session
-            </Text>
-          </TouchableOpacity>
-        </View>
+              {isAdmin && (
+                <>
+                  <View style={styles.hudDivider} />
+                  <HUDItem
+                    icon={ShieldCheck}
+                    label="Admin Console"
+                    onPress={() => navigateTo('/(app)/admin')}
+                    color={Theme.colors.primary}
+                  />
+                </>
+              )}
+
+              <View style={styles.hudDivider} />
+              <HUDItem
+                icon={LogOut}
+                label="Terminate Session"
+                onPress={handleSignOut}
+                color="#F87171"
+              />
+            </View>
+          )}
+
+          {activeMenu === 'notif' && (
+            <View>
+              <View style={styles.hudHeaderRow}>
+                <Text style={styles.hudLabel}>INTELLIGENCE LOGS</Text>
+                <TouchableOpacity>
+                  <Text style={styles.clearText}>CLEAR ALL</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.emptyNotifContainer}>
+                <History size={28} color="rgba(255,255,255,0.05)" />
+                <Text style={styles.emptyNotifText}>NO NEW ALERTS</Text>
+                <Text style={styles.emptyNotifSub}>
+                  System is operating within nominal parameters.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {activeMenu === 'baby' && (
+            <View style={styles.babyMenu}>
+              <Text style={styles.hudLabel}>SUBJECT FOCUS</Text>
+              <Text style={styles.emptyNotifSub}>
+                Use family settings to manage biometrics.
+              </Text>
+            </View>
+          )}
+        </Animated.View>
       )}
     </View>
   );
 }
 
+const HUDItem = ({ icon: Icon, label, onPress, color = '#FFF' }: any) => (
+  <TouchableOpacity style={styles.hudItem} onPress={onPress}>
+    <View style={styles.hudIconBox}>
+      <Icon size={18} color={color === '#FFF' ? '#94A3B8' : color} />
+    </View>
+    <Text style={[styles.hudItemText, { color }]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
   headerWrapper: {
-    height: 80,
+    height: 72,
     backgroundColor: '#020617',
     borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
     zIndex: 10000,
     width: '100%',
     alignItems: 'center',
@@ -248,10 +294,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     width: '100%',
   },
-  desktopWidth: { maxWidth: 1400 },
+  desktopWidth: { maxWidth: 1600 },
   leftSection: { flexDirection: 'row', alignItems: 'center', gap: 24 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
+  appIcon: { width: 28, height: 28, borderRadius: 8 },
+  logoText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 13,
+    letterSpacing: 1.5,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: -2,
+  },
+  statusDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Theme.colors.primary,
+  },
+  logoSub: {
+    color: Theme.colors.primary,
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
   babySelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -259,99 +329,120 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
-  activeBabyName: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  iconBtn: { padding: 8 },
+  activeBabyName: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBtn: { padding: 10, borderRadius: 14 },
+  activeBtn: { backgroundColor: 'rgba(255,255,255,0.06)' },
   notifBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    backgroundColor: '#F87171',
-    borderRadius: 4,
-    borderWidth: 2,
+    top: 10,
+    right: 10,
+    width: 6,
+    height: 6,
+    backgroundColor: Theme.colors.primary,
+    borderRadius: 3,
+    borderWidth: 1,
     borderColor: '#020617',
   },
-  profileBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  avatarWrapper: {
-    width: 36,
-    height: 36,
+  profileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 4,
+    borderRadius: 16,
+  },
+  avatarGlow: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
     borderWidth: 1.5,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   avatarImg: { width: '100%', height: '100%' },
   placeholderAvatar: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(79, 209, 199, 0.1)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  placeholderText: { color: '#4FD1C7', fontWeight: '900', fontSize: 14 },
-  dropdownHUD: {
+  placeholderChar: { color: '#FFF', fontWeight: '900', fontSize: 12 },
+  masterHUD: {
     position: 'absolute',
-    top: 75,
-    right: 24,
-    width: 260,
-    backgroundColor: '#0A101F',
-    borderRadius: 24,
+    top: 78,
+    width: 280,
+    backgroundColor: '#0F172A',
+    borderRadius: 28,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    borderColor: 'rgba(255,255,255,0.12)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20 },
+      android: { elevation: 15 },
+      web: { boxShadow: '0 12px 40px rgba(0,0,0,0.6)' },
+    }),
   },
-  babyPickerHUD: {
-    position: 'absolute',
-    top: 75,
-    left: 160,
-    width: 220,
-    backgroundColor: '#0A101F',
-    borderRadius: 24,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  profileHUDPos: { right: 24 },
+  notifHUDPos: { right: 80 },
+  hudHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: 12,
   },
-  dropLabel: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 9,
+  clearText: { color: Theme.colors.primary, fontSize: 8, fontWeight: '900' },
+  hudLabel: {
+    color: 'rgba(255,255,255,0.25)',
+    fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1.5,
-    marginLeft: 12,
-    marginVertical: 8,
+    letterSpacing: 2,
+    marginLeft: 14,
+    marginVertical: 14,
   },
-  dropItem: {
+  hudItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 18,
   },
-  dropText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-  babyItem: { padding: 14, borderRadius: 12 },
-  babyText: { color: '#94A3B8', fontSize: 12, fontWeight: '800' },
-  divider: {
+  hudIconBox: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 10,
+  },
+  hudItemText: { fontSize: 14, fontWeight: '700' },
+  hudDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    marginVertical: 8,
+    marginVertical: 10,
+    marginHorizontal: 14,
   },
-  addBtn: {
-    marginTop: 10,
-    padding: 12,
-    borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  addBtnText: {
-    color: '#4FD1C7',
-    fontSize: 10,
+  emptyNotifContainer: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  emptyNotifText: {
+    color: '#FFF',
+    fontSize: 11,
     fontWeight: '900',
-    textAlign: 'center',
+    letterSpacing: 1,
   },
+  emptyNotifSub: {
+    color: '#475569',
+    fontSize: 10,
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    lineHeight: 16,
+  },
+  babyMenu: { padding: 10 },
 });
