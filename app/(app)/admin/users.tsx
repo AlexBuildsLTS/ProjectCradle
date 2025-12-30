@@ -1,24 +1,29 @@
 /**
- * PROJECT CRADLE: FAMILY DIRECTORY V9.0 (STELLAR GLASS)
+ * PROJECT CRADLE: FAMILY DIRECTORY V10.0 (ULTIMATE COMMAND)
  * ----------------------------------------------------------------------------
- * CRITICAL FIXES:
- * 1. RECURSION: Resolved via get_auth_role SQL function.
- * 2. DESKTOP: Centered 1200px list and 480px fixed-width modals (No stretching).
- * 3. SYMMETRY: Top-left icon alignment for every biometric entity card.
- * 4. ANIMATIONS: Non-linear spring transitions for all system shifts.
+ * DESIGN: Obsidian Glassmorphism (Stellar Edition)
+ * FEATURES:
+ * 1. REAL-TIME: Infinite recursion fixed via SQL get_auth_role function.
+ * 2. INTELLIGENCE: Dynamic stats strip for total/premium/banned counts.
+ * 3. PERFORMANCE: Memoized biometric filtering & spring-physics list entry.
+ * 4. UX: Top-left icon symmetry and centered desktop constraints.
  */
 
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import {
   Activity,
   Ban,
   CheckCircle,
+  Lock,
   Search,
-  Shield,
+  ShieldAlert,
+  Star,
   UserCog,
   User as UserIcon,
+  Users,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -48,7 +53,7 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [roleModal, setRoleModal] = useState(false);
 
-  // 1. DATA SYNCHRONIZATION: Resolved all biometric entities
+  // 1. DATA INITIALIZATION: Real-time biometric entity resolution
   const loadRegisteredProfiles = async () => {
     setLoading(true);
     try {
@@ -60,7 +65,7 @@ export default function AdminUsers() {
       if (error) throw error;
       setUsers(data || []);
     } catch (err) {
-      console.error('[Cradle Admin] Identity Sync Failed:', err);
+      console.error('[Cradle Admin] Entity Load Failure:', err);
     } finally {
       setLoading(false);
     }
@@ -72,9 +77,22 @@ export default function AdminUsers() {
     }, []),
   );
 
-  // 2. OPERATIONS: ACCESS MANAGEMENT
+  // 2. INTELLIGENCE CALCULATION: Live directory stats
+  const stats = useMemo(
+    () => ({
+      total: users.length,
+      premium: users.filter(
+        (u) => u.tier === 'PREMIUM' || u.tier === 'PREMIUM_MEMBER',
+      ).length,
+      restricted: users.filter((u) => u.metadata?.banned === true).length,
+    }),
+    [users],
+  );
+
+  // 3. OPERATIONS: RBAC & SYSTEM ACCESS
   const updateAccess = async (newRole: string) => {
     if (!selectedUser) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const { error } = await supabase
         .from('profiles')
@@ -84,12 +102,13 @@ export default function AdminUsers() {
       loadRegisteredProfiles();
       setRoleModal(false);
     } catch (e: any) {
-      Alert.alert('Role Sync Error', e.message);
+      Alert.alert('Access Sync Failure', e.message);
     }
   };
 
   const toggleStatus = async (user: any) => {
     const isBanned = user.metadata?.banned === true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     try {
       const { error } = await supabase
         .from('profiles')
@@ -101,17 +120,26 @@ export default function AdminUsers() {
       if (error) throw error;
       loadRegisteredProfiles();
     } catch (e: any) {
-      Alert.alert('Status Sync Error', e.message);
+      Alert.alert('Status Sync Failure', e.message);
     }
   };
 
+  const filteredUsers = useMemo(() => {
+    const query = search.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.full_name || '').toLowerCase().includes(query) ||
+        (u.baby_name || '').toLowerCase().includes(query),
+    );
+  }, [users, search]);
+
   return (
     <SafeAreaView style={styles.root}>
-      <View style={[styles.mainWrapper, isDesktop && styles.desktopWidth]}>
+      <View style={[styles.mainWrapper, isDesktop && styles.desktopConstraint]}>
         {/* HEADER: Iconic Top-Left Symmetry */}
         <View style={styles.header}>
-          <View style={styles.headerIconContainer}>
-            <Shield size={24} color={Theme.colors.primary} />
+          <View style={styles.headerIconBox}>
+            <ShieldAlert size={22} color={Theme.colors.primary} />
           </View>
           <View>
             <Text style={styles.headerTitle}>FAMILY DIRECTORY</Text>
@@ -119,6 +147,28 @@ export default function AdminUsers() {
               CORE BIOMETRIC ENTITY MANAGEMENT
             </Text>
           </View>
+        </View>
+
+        {/* INTELLIGENCE STRIP: Command Hub Overview */}
+        <View style={styles.statsStrip}>
+          <StatItem
+            label="TOTAL CORES"
+            value={stats.total}
+            icon={Users}
+            color="#FFF"
+          />
+          <StatItem
+            label="PREMIUM"
+            value={stats.premium}
+            icon={Star}
+            color={Theme.colors.secondary}
+          />
+          <StatItem
+            label="RESTRICTED"
+            value={stats.restricted}
+            icon={Lock}
+            color="#F87171"
+          />
         </View>
 
         {/* SEARCH HUD */}
@@ -136,15 +186,9 @@ export default function AdminUsers() {
           </View>
         </View>
 
-        {/* ENTITY LIST */}
+        {/* DIRECTORY LIST */}
         <FlatList
-          data={users.filter(
-            (u) =>
-              (u.full_name || '')
-                .toLowerCase()
-                .includes(search.toLowerCase()) ||
-              (u.baby_name || '').toLowerCase().includes(search.toLowerCase()),
-          )}
+          data={filteredUsers}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -165,15 +209,23 @@ export default function AdminUsers() {
             />
           )}
           keyExtractor={(item) => item.id}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyState}>
+                <Activity size={32} color="rgba(255,255,255,0.05)" />
+                <Text style={styles.emptyText}>
+                  NO BIOMETRIC ENTITIES MATCH QUERY
+                </Text>
+              </View>
+            ) : null
+          }
         />
       </View>
 
-      {/* ACCESS CONTROL: Fixed Width for Desktop */}
+      {/* ACCESS CONTROL: Pro-Width Modular Panel */}
       <Modal visible={roleModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, isDesktop && styles.fixedDesktopModal]}
-          >
+          <View style={[styles.modalContent, isDesktop && styles.desktopModal]}>
             <Text style={styles.modalLabel}>UPDATE SYSTEM ACCESS LEVEL</Text>
             {['MEMBER', 'PREMIUM_MEMBER', 'SUPPORT', 'ADMIN'].map((role) => (
               <TouchableOpacity
@@ -192,7 +244,7 @@ export default function AdminUsers() {
                   {role}
                 </Text>
                 {selectedUser?.role === role && (
-                  <CheckCircle size={18} color={Theme.colors.primary} />
+                  <CheckCircle size={16} color={Theme.colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -209,18 +261,26 @@ export default function AdminUsers() {
   );
 }
 
-// --- ANIMATED ENTITY CARD ---
+// --- SUB-COMPONENTS ---
+
+const StatItem = ({ label, value, icon: Icon, color }: any) => (
+  <View style={styles.statBox}>
+    <Icon size={12} color={color} opacity={0.5} />
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
 
 const AnimatedUserCard = ({ user, index, onEdit, onToggleStatus }: any) => {
   const springAnim = useRef(new Animated.Value(0)).current;
   const isBanned = user.metadata?.banned === true;
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.spring(springAnim, {
       toValue: 1,
-      tension: 40,
+      tension: 45,
       friction: 8,
-      delay: index * 60,
+      delay: Math.min(index * 40, 400), // Cap delay for long lists
       useNativeDriver: true,
     }).start();
   }, []);
@@ -273,10 +333,9 @@ const AnimatedUserCard = ({ user, index, onEdit, onToggleStatus }: any) => {
               style={[
                 styles.tierLabel,
                 {
-                  color:
-                    user.tier === 'PREMIUM'
-                      ? Theme.colors.secondary
-                      : '#475569',
+                  color: user.tier?.includes('PREMIUM')
+                    ? Theme.colors.secondary
+                    : '#475569',
                 },
               ]}
             >
@@ -324,12 +383,10 @@ const AnimatedUserCard = ({ user, index, onEdit, onToggleStatus }: any) => {
   );
 };
 
-// --- PREMIUM HUD STYLES ---
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617', alignItems: 'center' },
   mainWrapper: { flex: 1, width: '100%' },
-  desktopWidth: { maxWidth: 1200 },
+  desktopConstraint: { maxWidth: 1200 },
   header: {
     padding: 32,
     paddingTop: 60,
@@ -337,21 +394,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  headerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  headerIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: 'rgba(79, 209, 199, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(79, 209, 199, 0.12)',
+    borderColor: 'rgba(79, 209, 199, 0.1)',
   },
   headerTitle: {
     color: '#FFF',
     fontSize: 24,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
   headerSub: {
     color: '#475569',
@@ -360,6 +417,31 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 4,
   },
+
+  statsStrip: {
+    flexDirection: 'row',
+    paddingHorizontal: 32,
+    gap: 12,
+    marginBottom: 24,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statValue: { color: '#FFF', fontSize: 18, fontWeight: '900' },
+  statLabel: {
+    color: '#475569',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
   searchSection: { paddingHorizontal: 32, paddingBottom: 24 },
   searchBar: {
     flexDirection: 'row',
@@ -380,6 +462,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   list: { paddingHorizontal: 32, paddingBottom: 120 },
+  emptyState: { alignItems: 'center', paddingVertical: 100, gap: 16 },
+  emptyText: {
+    color: '#1E293B',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
 
   userCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -402,12 +491,7 @@ const styles = StyleSheet.create({
   },
   avatarImg: { width: '100%', height: '100%', borderRadius: 14 },
   userInfo: { flex: 1, marginLeft: 16 },
-  userName: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
+  userName: { color: '#FFF', fontSize: 16, fontWeight: '800' },
   strikethrough: { textDecorationLine: 'line-through' },
   roleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   roleLabel: { color: Theme.colors.primary, fontSize: 8, fontWeight: '900' },
@@ -421,7 +505,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -434,7 +517,6 @@ const styles = StyleSheet.create({
   },
   subjectMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   subjectName: { color: '#475569', fontSize: 10, fontWeight: '800' },
-
   statusBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -456,7 +538,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.97)',
+    backgroundColor: 'rgba(0,0,0,0.98)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
@@ -469,7 +551,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
     width: '100%',
   },
-  fixedDesktopModal: { maxWidth: 480 },
+  desktopModal: { maxWidth: 480 },
   modalLabel: {
     color: '#475569',
     fontSize: 9,
@@ -486,20 +568,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)',
   },
-  roleBtnText: {
-    color: '#FFF',
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 1,
-  },
+  roleBtnText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
   closeBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    marginTop: 32,
     alignItems: 'center',
     paddingVertical: 20,
     borderTopWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)',
-    marginTop: 16,
+    width: '100%',
   },
   closeBtnText: {
     color: Theme.colors.primary,
