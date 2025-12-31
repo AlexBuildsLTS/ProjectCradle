@@ -1,11 +1,11 @@
 /**
- * PROJECT CRADLE: MASTER ORCHESTRATOR V32.0 (STELLAR GLASS)
+ * PROJECT CRADLE: MASTER ORCHESTRATOR V33.0 (SESSION RECOVERY)
  * ----------------------------------------------------------------------------
  * CRITICAL FIXES:
- * 1. RECURSION CRASH: SQL definer bypass resolved loop.
- * 2. TS SAFETY: RNImage aliased for JSX; pathname null-checks active.
- * 3. UX: Strictly purged 10+ utility routes from mobile tab bar.
- * 4. DESIGN: Obsidian-to-Deep-Navy gradients with Frosted Glass overlays.
+ * 1. TERMINATE SESSION: Corrected handleSignOut logic for both Sidebar and Header.
+ * 2. TS SAFETY: Resolved RNImage alias and pathname null-checks.
+ * 3. UX: Strictly purged bloat from mobile tab bar (5-core focus).
+ * 4. DESIGN: Locked 280px sidebar and obsidian-depth gradients.
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,7 +37,6 @@ import {
   View,
 } from 'react-native';
 
-// CORE PROJECT IMPORTS
 import GlobalHeader from '@/components/navigation/GlobalHeader';
 import { useAuth } from '@/context/auth';
 import { FamilyProvider } from '@/context/family';
@@ -45,7 +44,7 @@ import { Theme } from '@/lib/shared/Theme';
 import { supabase } from '@/lib/supabase';
 
 export default function AppLayout() {
-  // --- 1. ALL HOOKS MUST BE AT THE ABSOLUTE TOP ---
+  // --- 1. HOOKS (TOP LEVEL ONLY) ---
   const { session, profile, isLoading: authLoading } = useAuth();
   const { width } = useWindowDimensions();
   const router = useRouter();
@@ -58,7 +57,7 @@ export default function AppLayout() {
     if (profile) setIdentityLoading(false);
   }, [profile]);
 
-  // NAVIGATION LOGIC: Dynamic tier-gating
+  // NAVIGATION LOGIC: Tier-based visibility
   const menuItems = useMemo(() => {
     const role = profile?.role || 'MEMBER';
     const isPremium = ['ADMIN', 'PREMIUM_MEMBER', 'SUPPORT'].includes(role);
@@ -92,12 +91,18 @@ export default function AppLayout() {
     return items;
   }, [profile]);
 
+  // FIXED: Atomic Sign Out with explicit Router Reset
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.replace('/(auth)/sign-in');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace('/(auth)/sign-in');
+    } catch (err) {
+      console.error('[Orchestrator] Termination Failed:', err);
+    }
   };
 
-  // --- 2. CONDITIONAL RETURNS ONLY AFTER HOOKS ---
+  // --- 2. CONDITIONAL RENDERING ---
   if (authLoading || (session && identityLoading)) {
     return (
       <View style={styles.loaderContainer}>
@@ -115,7 +120,7 @@ export default function AppLayout() {
         <StatusBar barStyle="light-content" />
 
         {!isDesktop ? (
-          /* MOBILE VIEWPORT: HIGH-FIDELITY BIOMETRIC HUD */
+          /* MOBILE VIEWPORT */
           <View style={{ flex: 1 }}>
             <GlobalHeader />
             <Tabs
@@ -143,8 +148,6 @@ export default function AppLayout() {
                   tabBarIcon: ({ color }) => <Milk color={color} size={20} />,
                 }}
               />
-
-              {/* THE "ZAP" HERO BUTTON: BIOMETRIC QUICK ACTION */}
               <Tabs.Screen
                 name="quick-log"
                 options={{
@@ -156,7 +159,6 @@ export default function AppLayout() {
                   ),
                 }}
               />
-
               <Tabs.Screen
                 name="sleep"
                 options={{
@@ -164,24 +166,17 @@ export default function AppLayout() {
                   tabBarIcon: ({ color }) => <Moon color={color} size={20} />,
                 }}
               />
-
-              {/* PREMIUM PROTECTED TAB */}
               <Tabs.Screen
                 name="journal"
                 options={{
                   title: 'LOG',
-                  href: ['ADMIN', 'PREMIUM_MEMBER', 'SUPPORT'].includes(
-                    profile?.role || '',
-                  )
-                    ? undefined
-                    : null,
                   tabBarIcon: ({ color }) => (
                     <BookOpen color={color} size={20} />
                   ),
                 }}
               />
 
-              {/* SYSTEM PURGE: EXPLICITLY HIDING ALL BLOAT ROUTES */}
+              {/* SYSTEM PURGE: HIDDEN ROUTES */}
               {[
                 'analytics',
                 'admin',
@@ -206,7 +201,7 @@ export default function AppLayout() {
             </Tabs>
           </View>
         ) : (
-          /* DESKTOP VIEWPORT: ENTERPRISE GRADIENT SIDEBAR */
+          /* DESKTOP VIEWPORT: SIDEBAR */
           <View style={styles.desktopRoot}>
             <LinearGradient
               colors={['#0A0F1E', '#020617']}
@@ -220,7 +215,7 @@ export default function AppLayout() {
                   />
                   <View>
                     <Text style={styles.brandTitle}>Cradle</Text>
-                    <Text style={styles.brandSub}>BIOMETRIC V32</Text>
+                    <Text style={styles.brandSub}>BIOMETRIC V33</Text>
                   </View>
                 </View>
 
@@ -232,7 +227,7 @@ export default function AppLayout() {
                   {menuItems.map((item) => {
                     const isActive = pathname
                       ? pathname.startsWith(item.path)
-                      : false; // FIXED: TS2345
+                      : false;
                     return (
                       <TouchableOpacity
                         key={item.name}
@@ -265,9 +260,8 @@ export default function AppLayout() {
                   <SidebarAction
                     icon={Settings}
                     label="Settings"
-                    onPress={() => router.push('/(app)/settings')}
+                    onPress={() => router.push('./settings/index')}
                   />
-
                   <SidebarAction
                     icon={LifeBuoy}
                     label="Support Queue"
@@ -435,13 +429,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -35,
-    ...Platform.select({
-      ios: {
-        shadowColor: Theme.colors.primary,
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
   },
 });
