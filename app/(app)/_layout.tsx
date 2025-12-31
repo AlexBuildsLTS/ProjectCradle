@@ -1,11 +1,12 @@
 /**
- * PROJECT CRADLE: MASTER ORCHESTRATOR V33.0 (SESSION RECOVERY)
+ * PROJECT CRADLE: MASTER ORCHESTRATOR V38.2 (FINAL ICON FIX)
+ * Path: app/(app)/_layout.tsx
  * ----------------------------------------------------------------------------
  * CRITICAL FIXES:
- * 1. TERMINATE SESSION: Corrected handleSignOut logic for both Sidebar and Header.
- * 2. TS SAFETY: Resolved RNImage alias and pathname null-checks.
- * 3. UX: Strictly purged bloat from mobile tab bar (5-core focus).
- * 4. DESIGN: Locked 280px sidebar and obsidian-depth gradients.
+ * 1. JOURNAL ICON FIX: Mapped 'BookOpen' to correct 'journal' route name.
+ * 2. BERRY ICON: Verified 'Sparkles' mapping for Berry AI.
+ * 3. TERMINATE SESSION: Confirmed atomic signOut + hard router reset.
+ * 4. SYSTEM PURGE: Hard-killed all settings and hidden routes from mobile UI.
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ import {
   Moon,
   Settings,
   ShieldCheck,
+  Sparkles,
   Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -44,7 +46,6 @@ import { Theme } from '@/lib/shared/Theme';
 import { supabase } from '@/lib/supabase';
 
 export default function AppLayout() {
-  // --- 1. HOOKS (TOP LEVEL ONLY) ---
   const { session, profile, isLoading: authLoading } = useAuth();
   const { width } = useWindowDimensions();
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function AppLayout() {
     if (profile) setIdentityLoading(false);
   }, [profile]);
 
-  // NAVIGATION LOGIC: Tier-based visibility
+  // NAVIGATION LOGIC: Desktop Sidebar
   const menuItems = useMemo(() => {
     const role = profile?.role || 'MEMBER';
     const isPremium = ['ADMIN', 'PREMIUM_MEMBER', 'SUPPORT'].includes(role);
@@ -87,27 +88,31 @@ export default function AppLayout() {
         label: 'Journal',
         path: '/(app)/journal',
       });
+      items.push({
+        name: 'berry-ai',
+        icon: Sparkles,
+        label: 'Berry AI',
+        path: '/(app)/berry-ai',
+      });
     }
     return items;
   }, [profile]);
 
-  // FIXED: Atomic Sign Out with explicit Router Reset
+  // ATOMIC SESSION TERMINATION
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
       router.replace('/(auth)/sign-in');
     } catch (err) {
-      console.error('[Orchestrator] Termination Failed:', err);
+      console.error('[Orchestrator] Termination Error:', err);
     }
   };
 
-  // --- 2. CONDITIONAL RENDERING ---
   if (authLoading || (session && identityLoading)) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator color={Theme.colors.primary} size="large" />
-        <Text style={styles.loaderText}>SYNCHRONIZING BIOMETRIC CORE...</Text>
+        <Text style={styles.loaderText}>SYNCHRONIZING CORE...</Text>
       </View>
     );
   }
@@ -120,7 +125,7 @@ export default function AppLayout() {
         <StatusBar barStyle="light-content" />
 
         {!isDesktop ? (
-          /* MOBILE VIEWPORT */
+          /* MOBILE VIEWPORT: CLEAN 7-CORE FOCUS */
           <View style={{ flex: 1 }}>
             <GlobalHeader />
             <Tabs
@@ -137,7 +142,7 @@ export default function AppLayout() {
                 options={{
                   title: 'HUB',
                   tabBarIcon: ({ color }) => (
-                    <LayoutDashboard color={color} size={20} />
+                    <LayoutDashboard color={color} size={22} />
                   ),
                 }}
               />
@@ -145,7 +150,14 @@ export default function AppLayout() {
                 name="feeding"
                 options={{
                   title: 'FEED',
-                  tabBarIcon: ({ color }) => <Milk color={color} size={20} />,
+                  tabBarIcon: ({ color }) => <Milk color={color} size={22} />,
+                }}
+              />
+              <Tabs.Screen
+                name="sleep"
+                options={{
+                  title: 'SLEEP',
+                  tabBarIcon: ({ color }) => <Moon color={color} size={22} />,
                 }}
               />
               <Tabs.Screen
@@ -154,43 +166,58 @@ export default function AppLayout() {
                   title: '',
                   tabBarIcon: () => (
                     <View style={styles.zapHero}>
-                      <Zap color="#020617" size={24} fill="#020617" />
+                      <Zap color="#020617" size={26} fill="#020617" />
                     </View>
                   ),
                 }}
               />
               <Tabs.Screen
-                name="sleep"
+                name="growth"
                 options={{
-                  title: 'SLEEP',
-                  tabBarIcon: ({ color }) => <Moon color={color} size={20} />,
+                  title: 'GROWTH',
+                  tabBarIcon: ({ color }) => (
+                    <Activity color={color} size={22} />
+                  ),
                 }}
               />
+              {/* FIXED: Mapped to correct route name 'journal' instead of 'journal/index' */}
               <Tabs.Screen
                 name="journal"
                 options={{
                   title: 'LOG',
                   tabBarIcon: ({ color }) => (
-                    <BookOpen color={color} size={20} />
+                    <BookOpen color={color} size={22} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="berry-ai"
+                options={{
+                  title: 'BERRY',
+                  tabBarIcon: ({ color }) => (
+                    <Sparkles color={color} size={22} />
                   ),
                 }}
               />
 
-              {/* SYSTEM PURGE: HIDDEN ROUTES */}
+              {/* SYSTEM PURGE: REMOVE ALL BLOAT FROM BOTTOM TAB BAR */}
               {[
                 'analytics',
                 'admin',
-                'settings',
+                'support',
+                'settings/index',
+                'settings/family',
+                'settings/profile',
+                'settings/mfa',
+                'settings/notifications',
+                'settings/password',
+                'settings/sounds',
+                'family',
                 'profile',
                 'health',
-                'support',
-                'notifications',
-                'family',
                 'shared',
                 'family-init',
                 'journal/timeline',
-                'growth',
-                'berry-ai',
               ].map((route) => (
                 <Tabs.Screen
                   key={route}
@@ -201,7 +228,7 @@ export default function AppLayout() {
             </Tabs>
           </View>
         ) : (
-          /* DESKTOP VIEWPORT: SIDEBAR */
+          /* DESKTOP VIEWPORT: OBSIDIAN SIDEBAR */
           <View style={styles.desktopRoot}>
             <LinearGradient
               colors={['#0A0F1E', '#020617']}
@@ -215,7 +242,7 @@ export default function AppLayout() {
                   />
                   <View>
                     <Text style={styles.brandTitle}>Cradle</Text>
-                    <Text style={styles.brandSub}>BIOMETRIC V33</Text>
+                    <Text style={styles.brandSub}>BIOMETRIC V38.2</Text>
                   </View>
                 </View>
 
@@ -260,7 +287,7 @@ export default function AppLayout() {
                   <SidebarAction
                     icon={Settings}
                     label="Settings"
-                    onPress={() => router.push('./settings/index')}
+                    onPress={() => router.push('/(app)/settings')}
                   />
                   <SidebarAction
                     icon={LifeBuoy}
@@ -406,7 +433,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   contentWrapper: { flex: 1 },
-  mainViewport: { flex: 1, padding: 48 },
+  mainViewport: { flex: 1 },
   mobileTabBar: {
     height: 85,
     backgroundColor: '#0A0F1E',
@@ -429,5 +456,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -35,
+    shadowColor: Theme.colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
   },
 });

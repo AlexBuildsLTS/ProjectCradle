@@ -1,76 +1,65 @@
 /**
- * ============================================================================
- * 🔐 SECURE STORAGE (TITAN LAYER V1.1)
- * ============================================================================
- * Abstraction layer ensuring secrets are stored in the device's hardware
- * Secure Enclave (iOS/Android).
- * * FIX: Added SSR-safe window checks to prevent build-time crashes.
- * ============================================================================
+ * PROJECT CRADLE: SECURE STORAGE TITAN V2.0
+ * Path: lib/secureStorage.ts
+ * ----------------------------------------------------------------------------
+ * OPTIMIZATIONS:
+ * 1. MEMORY FALLBACK: Integrated fail-safe for restricted Web environments.
+ * 2. SYNC INTERFACE: Optimized for Supabase Auth's expected storage behavior.
+ * 3. SSR HARDENING: Direct window/document guards for server-side environments.
+ * 4. HARDWARE ENCLAVE: Direct mapping to iOS/Android SecureStore for secrets.
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-// Helper to determine if we are in a browser environment
-const isBrowser = typeof window !== 'undefined';
-
-export const setItem = async (key: string, value: string): Promise<void> => {
-  try {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        window.localStorage.setItem(key, value);
-      }
-    } else {
-      await SecureStore.setItemAsync(key, value);
-    }
-  } catch (error) {
-    console.error(`[SecureStorage] Error setting ${key}:`, error);
-    throw error;
-  }
-};
-
-export const getItem = async (key: string): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        return window.localStorage.getItem(key);
-      }
-      return null;
-    } else {
-      return await SecureStore.getItemAsync(key);
-    }
-  } catch (error) {
-    console.error(`[SecureStorage] Error getting ${key}:`, error);
-    return null;
-  }
-};
-
-export const deleteItem = async (key: string): Promise<void> => {
-  try {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        window.localStorage.removeItem(key);
-      }
-    } else {
-      await SecureStore.deleteItemAsync(key);
-    }
-  } catch (error) {
-    console.error(`[SecureStorage] Error deleting ${key}:`, error);
-  }
-};
-
 /**
- * Supabase Auth Storage Adapter
- * Designed to interface directly with the Supabase GoTrue singleton.
+ * FAIL-SAFE: Volatile memory storage for environments where localStorage
+ * or SecureStore is unavailable (e.g., SSR or Incognito mode).
  */
+const volatileStorage: Record<string, string> = {};
+
 export const secureStorage = {
-  getItem: async (key: string): Promise<string | null> => {
-    return await getItem(key);
+  getItem: (key: string): string | null | Promise<string | null> => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          return window.localStorage.getItem(key);
+        }
+        return volatileStorage[key] || null;
+      }
+      return SecureStore.getItemAsync(key);
+    } catch (e) {
+      return volatileStorage[key] || null;
+    }
   },
-  setItem: async (key: string, value: string): Promise<void> => {
-    await setItem(key, value);
+
+  setItem: (key: string, value: string): void | Promise<void> => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, value);
+        }
+        volatileStorage[key] = value;
+      } else {
+        return SecureStore.setItemAsync(key, value);
+      }
+    } catch (e) {
+      volatileStorage[key] = value;
+    }
   },
-  removeItem: async (key: string): Promise<void> => {
-    await deleteItem(key);
+
+  removeItem: (key: string): void | Promise<void> => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(key);
+        }
+        delete volatileStorage[key];
+      } else {
+        return SecureStore.deleteItemAsync(key);
+      }
+    } catch (e) {
+      delete volatileStorage[key];
+    }
   },
 };
