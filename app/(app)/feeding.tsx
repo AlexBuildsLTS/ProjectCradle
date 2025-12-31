@@ -83,7 +83,7 @@ export default function FeedingScreen() {
       setIsTracking(false);
       setActiveSide(null);
       await fetchLogs();
-      Alert.alert('SYNC SUCCESS', 'Biometric session committed.');
+      Alert.alert('SYNC SUCCESS', 'session committed.');
     } catch (e: any) {
       Alert.alert('SAVE FAILED', e.message);
     } finally {

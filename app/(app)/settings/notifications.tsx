@@ -193,7 +193,7 @@ export default function NotificationsScreen() {
                 <BellOff size={40} color="#1E293B" />
                 <Text style={styles.emptyText}>NOTIFICATIONS SILENCED</Text>
                 <Text style={styles.emptySub}>
-                  Re-enable alerts to resume biometric monitoring.
+                  Re-enable alerts to resume baby monitoring.
                 </Text>
               </View>
             ) : loading ? (

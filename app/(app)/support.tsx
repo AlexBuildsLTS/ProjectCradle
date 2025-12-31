@@ -228,7 +228,7 @@ export default function SupportHub() {
     if (!selectedTicket || !isStaff) return;
     Alert.alert(
       'Purge Ledger',
-      'Permanently destroy this biometric ticket record?',
+      'Permanently destroy this support ticket record?',
       [
         { text: 'Cancel' },
         {
@@ -311,7 +311,7 @@ export default function SupportHub() {
               <Search size={18} color="#4FD1C7" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search biometric ledger..."
+                placeholder="Search Support System ledger..."
                 placeholderTextColor="#475569"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -422,7 +422,7 @@ export default function SupportHub() {
                 <X size={24} color="#FFF" />
               </TouchableOpacity>
               <View style={styles.modalHeaderCenter}>
-                <Text style={styles.modalTitleHUD}>BIOMETRIC FREQUENCY</Text>
+                <Text style={styles.modalTitleHUD}>Support Tickets</Text>
                 <Text style={styles.modalStatus}>{selectedTicket?.status}</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 15 }}>
@@ -549,7 +549,7 @@ export default function SupportHub() {
                 <View style={styles.replyRow}>
                   <TextInput
                     style={styles.replyInput}
-                    placeholder="Initiate biometric sync..."
+                    placeholder="Describe your issue..."
                     placeholderTextColor="#475569"
                     value={reply}
                     onChangeText={setReply}

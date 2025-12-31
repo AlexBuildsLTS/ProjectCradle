@@ -211,7 +211,7 @@ export default function SleepScreen() {
           >
             <View style={styles.ledgerHeader}>
               <History size={16} color="#475569" />
-              <Text style={styles.ledgerTitle}>RECENT BIOMETRIC LOGS</Text>
+              <Text style={styles.ledgerTitle}>RECENT LOGS</Text>
             </View>
 
             {logs.map((log) => {

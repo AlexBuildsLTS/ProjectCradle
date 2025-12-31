@@ -219,7 +219,7 @@ export default function Dashboard() {
         {/* 4. BIOMETRIC LEDGER */}
         <View style={[styles.ledgerSection, isDesktop && styles.desktopLedger]}>
           <View style={styles.ledgerHeader}>
-            <Text style={styles.sectionTitle}>BIOMETRIC LEDGER</Text>
+            <Text style={styles.sectionTitle}>LEDGER</Text>
             <TouchableOpacity
               onPress={() => router.push('/(app)/journal/timeline')}
             >

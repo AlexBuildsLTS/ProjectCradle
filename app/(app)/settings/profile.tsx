@@ -216,7 +216,7 @@ export default function ProfileScreen() {
               </View>
             </View>
             <Text style={styles.avatarLabel}>
-              TAP TO UPDATE BIOMETRIC IDENTIFIER
+              TAP TO UPDATE
             </Text>
           </TouchableOpacity>
 
@@ -228,7 +228,7 @@ export default function ProfileScreen() {
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Enter biometric name"
+                placeholder="Enter baby name"
                 placeholderTextColor="#475569"
               />
             </View>

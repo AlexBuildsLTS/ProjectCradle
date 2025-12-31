@@ -134,7 +134,7 @@ export default function GrowthScreen() {
     if (!selectedBaby?.id)
       return Alert.alert('CORE ERROR', 'No active subject detected.');
     if (!weightInput && !heightInput)
-      return Alert.alert('REQUIRED', 'Enter biometric values.');
+      return Alert.alert('REQUIRED', 'Enter baby values.');
 
     setLoading(true);
     triggerFeedback(Haptics.ImpactFeedbackStyle.Heavy);
@@ -220,7 +220,7 @@ export default function GrowthScreen() {
           {showSwitcher && (
             <GlassCard style={styles.switcherPanel}>
               <Text style={styles.panelLabel}>
-                SELECT ACTIVE BIOMETRIC CORE
+                SELECT ACTIVE BABY
               </Text>
               {babies.map((baby: any) => (
                 <TouchableOpacity
@@ -266,7 +266,7 @@ export default function GrowthScreen() {
             <View style={styles.analyticsHeader}>
               <TrendingUp size={18} color={Theme.colors.primary} />
               <Text style={styles.analyticsTitle}>
-                BIOMETRIC PROGRESSION ({weightUnit.toUpperCase()})
+                BABY PROGRESSION ({weightUnit.toUpperCase()})
               </Text>
             </View>
 

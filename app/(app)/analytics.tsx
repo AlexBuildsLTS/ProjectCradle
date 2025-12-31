@@ -134,7 +134,7 @@ export default function AnalyticsScreen() {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color={Theme.colors.primary} size="large" />
-        <Text style={styles.loaderText}>BOOTING ANALYTICS CORE...</Text>
+        <Text style={styles.loaderText}>BOOTING ANALYTICS...</Text>
       </View>
     );
   }
@@ -147,9 +147,9 @@ export default function AnalyticsScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>BIOMETRIC TRENDS</Text>
+          <Text style={styles.title}>BABY TRENDS</Text>
           <Text style={styles.babySub}>
-            CORE SYNC: {selectedBaby?.name?.toUpperCase()}
+            SYNC: {selectedBaby?.name?.toUpperCase()}
           </Text>
         </View>
         <View style={styles.badge}>
@@ -172,13 +172,13 @@ export default function AnalyticsScreen() {
           color="#B794F6"
         />
         <StatCard
-          label="WEIGHT CORE"
+          label="WEIGHT"
           value={stats.latestWeight}
           icon={Scale}
           color="#9AE6B4"
         />
         <StatCard
-          label="HEIGHT CORE"
+          label="HEIGHT"
           value={stats.latestHeight}
           icon={TrendingUp}
           color="#4FD1C7"
@@ -212,7 +212,7 @@ export default function AnalyticsScreen() {
             <Text style={styles.aiTitle}>BERRY AI INSIGHT</Text>
           </View>
           <Text style={styles.aiDesc}>
-            Subject exhibits stable biometric progression. Trajectory suggests{' '}
+            Subject exhibits stable baby progression. Trajectory suggests{' '}
             {stats.sleepEfficiency}% cycle optimization. Maintain current
             metabolic intake.
           </Text>

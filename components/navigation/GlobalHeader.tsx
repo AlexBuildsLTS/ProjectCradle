@@ -215,7 +215,7 @@ export default function GlobalHeader() {
               <HUDItem
                 icon={UserCircle}
                 label="Profile"
-                onPress={() => navigateTo('/(app)/profile')}
+                onPress={() => navigateTo('/(app)/settings/profile')}
               />
               <HUDItem
                 icon={LifeBuoy}

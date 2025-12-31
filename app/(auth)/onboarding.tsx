@@ -56,7 +56,7 @@ export default function Onboarding() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     try {
-      // 1. REGISTER BIOMETRIC SUBJECT
+      // 1. REGISTER SUBJECT
       const { error: babyError } = await supabase.from('babies').insert({
         parent_id: user?.id,
         name: babyName.trim(),
@@ -134,7 +134,7 @@ export default function Onboarding() {
             />
           </View>
 
-          <Text style={styles.inputLabel}>BIOMETRIC DATE OF BIRTH</Text>
+          <Text style={styles.inputLabel}>BABY DATE OF BIRTH</Text>
           <View style={styles.inputGroup}>
             <Calendar size={20} color="#4FD1C7" />
             {Platform.OS === 'web' ? (

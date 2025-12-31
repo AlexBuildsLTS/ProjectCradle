@@ -106,7 +106,7 @@ export default function FamilyScreen() {
     if (!name.trim() || !dob.trim()) {
       return Alert.alert(
         'REQUIRED',
-        'Biometric name and birth sequence are mandatory.',
+        'Baby name and birth sequence are mandatory.',
       );
     }
 
@@ -155,7 +155,7 @@ export default function FamilyScreen() {
     triggerFeedback(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       'PURGE CORE',
-      `Permanently delete ${babyName}'s biometric data?`,
+      `Permanently delete ${babyName}'s baby's record?`,
       [
         { text: 'CANCEL', style: 'cancel' },
         {
@@ -204,7 +204,7 @@ export default function FamilyScreen() {
           </View>
 
           {/* 2. PRIMARY FOCUS HUD */}
-          <Text style={styles.sectionLabel}>PRIMARY BIOMETRIC FOCUS</Text>
+          <Text style={styles.sectionLabel}>PRIMARY BABY FOCUS</Text>
           {selectedBaby ? (
             <AnimatedCard>
               <GlassCard style={styles.activeCard}>
@@ -224,7 +224,7 @@ export default function FamilyScreen() {
                       {selectedBaby.name.toUpperCase()}
                     </Text>
                     <Text style={styles.activeStatus}>
-                      BIOMETRIC FEED ACTIVE
+                      BABY FEED 
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -260,7 +260,7 @@ export default function FamilyScreen() {
           )}
 
           {/* 3. GLOBAL CONFIGURATION HUD */}
-          <Text style={styles.sectionLabel}>BIOMETRIC UNIT CONFIGURATION</Text>
+          <Text style={styles.sectionLabel}>FAMILY UNIT CONFIGURATION</Text>
           <GlassCard style={styles.prefCard}>
             {/* WEIGHT PERSISTENCE */}
             <View style={styles.prefRow}>
@@ -422,7 +422,7 @@ export default function FamilyScreen() {
               />
 
               <Text style={styles.inputLabel}>
-                INITIAL BIOMETRIC WEIGHT (GRAMS)
+                INITIAL BABY WEIGHT (GRAMS)
               </Text>
               <TextInput
                 style={styles.input}

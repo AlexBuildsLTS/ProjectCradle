@@ -200,7 +200,7 @@ export default function AppLayout() {
                 }}
               />
 
-              {/* SYSTEM PURGE: REMOVE ALL BLOAT FROM BOTTOM TAB BAR */}
+              {/* SYSTEM PURGE:*/}
               {[
                 'analytics',
                 'admin',

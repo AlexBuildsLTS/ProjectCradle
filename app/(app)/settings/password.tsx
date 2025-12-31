@@ -145,7 +145,7 @@ export default function ChangePasswordScreen() {
           <View style={styles.headerDesc}>
             <Text style={styles.subTitle}>Update Master Key</Text>
             <Text style={styles.infoText}>
-              This will re-encrypt your local biometric vault.
+              This will re-encrypt your local vault.
             </Text>
           </View>
 

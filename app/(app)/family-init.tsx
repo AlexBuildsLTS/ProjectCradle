@@ -70,7 +70,7 @@ export default function BabyCoreInit() {
         `${babyName.toUpperCase()} has been registered to your biometric ledger.`,
       );
 
-      router.push('/(app)/family');
+      router.push('/(app)/settings/family');
     } catch (e: any) {
       Alert.alert('INIT ERROR', e.message);
       console.error('Database Registration Error:', e);
