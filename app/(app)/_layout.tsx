@@ -1,12 +1,13 @@
 /**
- * PROJECT CRADLE: MASTER ORCHESTRATOR V38.2 (FINAL ICON FIX)
+ * PROJECT CRADLE: MASTER ORCHESTRATOR V39.0 (SOVEREIGN ACCESS)
  * Path: app/(app)/_layout.tsx
  * ----------------------------------------------------------------------------
- * CRITICAL FIXES:
- * 1. JOURNAL ICON FIX: Mapped 'BookOpen' to correct 'journal' route name.
- * 2. BERRY ICON: Verified 'Sparkles' mapping for Berry AI.
- * 3. TERMINATE SESSION: Confirmed atomic signOut + hard router reset.
- * 4. SYSTEM PURGE: Hard-killed all settings and hidden routes from mobile UI.
+ * MODULE OVERVIEW:
+ * 1. IDENTITY HANDSHAKE: Verifies user session and profile role (Member/Plus/Premium/Staff).
+ * 2. TIERED RESTRICTION: Dynamic feature gating based on biometric access levels.
+ * 3. JOURNAL RE-ROUTE: Mapped 'Log' to new folder-index (journal/index).
+ * 4. SYSTEM PURGE: Hard-hides nested settings and non-tab routes from Mobile UI.
+ * 5. DESKTOP SIDEBAR: Implements role-aware obsidian navigation for monitors.
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,8 +22,9 @@ import {
   Milk,
   Moon,
   Settings,
-  ShieldCheck,
+  ShieldAlert,
   Sparkles,
+  Users,
   Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -58,11 +60,25 @@ export default function AppLayout() {
     if (profile) setIdentityLoading(false);
   }, [profile]);
 
-  // NAVIGATION LOGIC: Desktop Sidebar
-  const menuItems = useMemo(() => {
-    const role = profile?.role || 'MEMBER';
-    const isPremium = ['ADMIN', 'PREMIUM_MEMBER', 'SUPPORT'].includes(role);
+  /**
+   * SOVEREIGN ROLE ENGINE: Defines feature access by tier.
+   * Member: Basic Tracking
+   * Plus: Sleep Intelligence (Zap)
+   * Premium/Staff: AI & Journal Intelligence (Sparkles/BookOpen)
+   */
+  const userRole = profile?.role || 'MEMBER';
+  const hasPlusAccess = [
+    'PLUS_MEMBER',
+    'PREMIUM_MEMBER',
+    'ADMIN',
+    'SUPPORT',
+  ].includes(userRole);
+  const hasPremiumAccess = ['PREMIUM_MEMBER', 'ADMIN', 'SUPPORT'].includes(
+    userRole,
+  );
 
+  // NAVIGATION LOGIC: Desktop Sidebar & Role Gating
+  const menuItems = useMemo(() => {
     const items = [
       { name: 'index', icon: LayoutDashboard, label: 'Hub', path: '/(app)/' },
       { name: 'feeding', icon: Milk, label: 'Feed', path: '/(app)/feeding' },
@@ -75,13 +91,16 @@ export default function AppLayout() {
       },
     ];
 
-    if (isPremium) {
+    if (hasPlusAccess) {
       items.push({
         name: 'analytics',
         icon: BarChart2,
         label: 'Insights',
         path: '/(app)/analytics',
       });
+    }
+
+    if (hasPremiumAccess) {
       items.push({
         name: 'journal',
         icon: BookOpen,
@@ -96,15 +115,15 @@ export default function AppLayout() {
       });
     }
     return items;
-  }, [profile]);
+  }, [userRole]);
 
-  // ATOMIC SESSION TERMINATION
+  // SESSION TERMINATION: Hard reset to auth landing
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
       router.replace('/(auth)/sign-in');
     } catch (err) {
-      console.error('[Orchestrator] Termination Error:', err);
+      console.error('[Orchestrator] Termination Failure:', err);
     }
   };
 
@@ -112,7 +131,7 @@ export default function AppLayout() {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator color={Theme.colors.primary} size="large" />
-        <Text style={styles.loaderText}>SYNCHRONIZING CORE...</Text>
+        <Text style={styles.loaderText}>SYNCHRONIZING BIO-CORE...</Text>
       </View>
     );
   }
@@ -125,7 +144,7 @@ export default function AppLayout() {
         <StatusBar barStyle="light-content" />
 
         {!isDesktop ? (
-          /* MOBILE VIEWPORT: CLEAN 7-CORE FOCUS */
+          /* --- MOBILE VIEWPORT: CLEAN BIOMETRIC TABS --- */
           <View style={{ flex: 1 }}>
             <GlobalHeader />
             <Tabs
@@ -160,6 +179,8 @@ export default function AppLayout() {
                   tabBarIcon: ({ color }) => <Moon color={color} size={22} />,
                 }}
               />
+
+              {/* Quick Log Action Center */}
               <Tabs.Screen
                 name="quick-log"
                 options={{
@@ -171,6 +192,7 @@ export default function AppLayout() {
                   ),
                 }}
               />
+
               <Tabs.Screen
                 name="growth"
                 options={{
@@ -180,27 +202,32 @@ export default function AppLayout() {
                   ),
                 }}
               />
-              {/* FIXED: Mapped to correct route name 'journal' instead of 'journal/index' */}
+
+              {/* Conditional Tab: Journal (Premium/Staff Only) */}
               <Tabs.Screen
-                name="journal"
+                name="journal/index"
                 options={{
                   title: 'LOG',
+                  href: hasPremiumAccess ? undefined : null,
                   tabBarIcon: ({ color }) => (
                     <BookOpen color={color} size={22} />
                   ),
                 }}
               />
+
+              {/* Conditional Tab: Berry AI (Premium/Staff Only) */}
               <Tabs.Screen
                 name="berry-ai"
                 options={{
                   title: 'BERRY',
+                  href: hasPremiumAccess ? undefined : null,
                   tabBarIcon: ({ color }) => (
                     <Sparkles color={color} size={22} />
                   ),
                 }}
               />
 
-              {/* SYSTEM PURGE:*/}
+              {/* SYSTEM PURGE: Hide nested engine routes from tab navigation */}
               {[
                 'analytics',
                 'admin',
@@ -218,6 +245,7 @@ export default function AppLayout() {
                 'shared',
                 'family-init',
                 'journal/timeline',
+                'journal',
               ].map((route) => (
                 <Tabs.Screen
                   key={route}
@@ -228,7 +256,7 @@ export default function AppLayout() {
             </Tabs>
           </View>
         ) : (
-          /* DESKTOP VIEWPORT: OBSIDIAN SIDEBAR */
+          /* --- DESKTOP VIEWPORT: OBSIDIAN SIDEBAR --- */
           <View style={styles.desktopRoot}>
             <LinearGradient
               colors={['#0A0F1E', '#020617']}
@@ -242,7 +270,7 @@ export default function AppLayout() {
                   />
                   <View>
                     <Text style={styles.brandTitle}>Cradle</Text>
-                    <Text style={styles.brandSub}>BIOMETRIC V38.2</Text>
+                    <Text style={styles.brandSub}>NORTH V39.0</Text>
                   </View>
                 </View>
 
@@ -250,6 +278,11 @@ export default function AppLayout() {
                   showsVerticalScrollIndicator={false}
                   style={styles.sidebarScroll}
                 >
+                  {/* Role Badge Section (New) */}
+                  <View style={styles.badgeSection}>
+                    <RoleBadge role={userRole} />
+                  </View>
+
                   <Text style={styles.sidebarLabel}>MONITORING CORES</Text>
                   {menuItems.map((item) => {
                     const isActive = pathname
@@ -291,13 +324,13 @@ export default function AppLayout() {
                   />
                   <SidebarAction
                     icon={LifeBuoy}
-                    label="Support Queue"
+                    label="Support Center"
                     onPress={() => router.push('/(app)/support')}
                   />
 
-                  {profile?.role === 'ADMIN' && (
+                  {userRole === 'ADMIN' && (
                     <SidebarAction
-                      icon={ShieldCheck}
+                      icon={ShieldAlert}
                       label="Admin Console"
                       onPress={() => router.push('/(app)/admin')}
                       color={Theme.colors.primary}
@@ -327,6 +360,45 @@ export default function AppLayout() {
     </FamilyProvider>
   );
 }
+
+/**
+ * IDENTITY COMPONENTS
+ */
+
+const RoleBadge = ({ role }: { role: string }) => {
+  const config: any = {
+    ADMIN: {
+      bg: 'rgba(79, 209, 199, 0.1)',
+      text: '#4FD1C7',
+      label: 'SOVEREIGN ADMIN',
+    },
+    SUPPORT: {
+      bg: 'rgba(183, 148, 246, 0.1)',
+      text: '#B794F6',
+      label: 'SUPPORT',
+    },
+    PREMIUM_MEMBER: {
+      bg: 'rgba(255, 215, 0, 0.1)',
+      text: '#FFD700',
+      label: 'PREMIUM',
+    },
+    PLUS_MEMBER: {
+      bg: 'rgba(79, 209, 199, 0.05)',
+      text: '#4FD1C7',
+      label: 'PLUS',
+    },
+    MEMBER: { bg: 'rgba(148, 163, 184, 0.1)', text: '#94A3B8', label: 'BASIC' },
+  };
+  const active = config[role] || config['MEMBER'];
+  return (
+    <View style={[styles.badgeBase, { backgroundColor: active.bg }]}>
+      <Users size={10} color={active.text} />
+      <Text style={[styles.badgeText, { color: active.text }]}>
+        {active.label}
+      </Text>
+    </View>
+  );
+};
 
 const SidebarAction = ({
   icon: Icon,
@@ -384,6 +456,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sidebarScroll: { marginTop: 32 },
+  badgeSection: { marginBottom: 32, paddingLeft: 12 },
+  badgeBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  badgeText: { fontSize: 8, fontWeight: '900', letterSpacing: 1 },
   sidebarLabel: {
     color: 'rgba(255,255,255,0.2)',
     fontSize: 9,

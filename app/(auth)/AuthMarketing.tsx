@@ -1,32 +1,35 @@
 /**
- * PROJECT CRADLE: AUTH MARKETING MASTER V4.0
+ * PROJECT CRADLE: AUTH MARKETING V5.0 (AAA+ ELITE)
  * Path: app/(auth)/AuthMarketing.tsx
- * FEATURES:
- * - High-fidelity tiered architecture (Free, Plus, Premium).
- * - Plain-English feature sets derived from core business logic.
- * - Integrated SweetSpot® and Berry AI branding.
+ * ----------------------------------------------------------------------------
+ * POLISH LOGIC:
+ * 1. TIERED COLORWAY: Neutral (Free), Teal (Plus), Violet (Elite).
+ * 2. LAYOUT: Auto-responsive Grid for Web/Desktop and Stack for Mobile.
+ * 3. BRANDING: Hard-locked "Cradle North" hero typography.
+ * 4. UX: Micro-animations via Reanimated for entrance staggered timing.
  */
+
 import { GlassCard } from '@/components/glass/GlassCard';
-import { Check, Database, Sparkles, Zap } from 'lucide-react-native';
-import React from 'react';
 import {
-  Platform,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+  Check,
+  Database,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 
-export default function AuthMarketing({ isDesktop }: { isDesktop: boolean }) {
+export default function AuthMarketing() {
   const { width } = useWindowDimensions();
-  const isReallyDesktop = Platform.OS === 'web' && width >= 1024;
+  const isReallyDesktop = width >= 1024;
 
   return (
     <View style={styles.container}>
       <Text style={styles.hero}>
-        Complete Baby Sleep{'\n'}
-        <Text style={{ color: '#4FD1C7' }}>& Parenting Solution.</Text>
+        Cradle{'\n'}
+        <Text style={{ color: '#4FD1C7' }}>North</Text>
       </Text>
 
       <View style={isReallyDesktop ? styles.desktopGrid : styles.mobileStack}>
@@ -35,6 +38,7 @@ export default function AuthMarketing({ isDesktop }: { isDesktop: boolean }) {
           icon={Database}
           title="FREE VERSION"
           tag="Core Essentials"
+          accent="#94A3B8"
           features={[
             'Complete baby tracking suite',
             'Sleep summaries and history',
@@ -44,40 +48,44 @@ export default function AuthMarketing({ isDesktop }: { isDesktop: boolean }) {
           delay={0}
         />
 
-        {/* --- 2. PLUS MEMBERSHIP: SLEEP INTELLIGENCE --- */}
+        {/* --- 2. PLUS MEMBERSHIP: INTELLIGENCE --- */}
         <TierCard
           icon={Zap}
           title="PLUS MEMBERSHIP"
           tag="Intelligence"
+          accent="#4FD1C7"
+          highlight
+          popular
           features={[
             'SweetSpot® sleep predictions',
             'Schedule Creator for routines',
             'AI Logging (Voice/Text/Photo)',
             'Enhanced reports & insights',
           ]}
-          highlight
           delay={200}
         />
 
-        {/* --- 3. PREMIUM MEMBERSHIP: FULL SUPPORT --- */}
+        {/* --- 3. PREMIUM: FULL SUPPORT --- */}
         <TierCard
           icon={Sparkles}
-          title="PREMIUM ELITE"
+          title="PREMIUM"
           tag="Full Support"
+          accent="#B794F6"
+          highlight
           features={[
             'Berry AI: 24/7 Expert Chat',
             'Custom expert-designed plans',
             'Weekly progress check-ins',
             'Ongoing developmental support',
           ]}
-          highlight
           delay={400}
         />
       </View>
 
       <View style={styles.provenBadge}>
+        <ShieldCheck size={14} color="rgba(79, 209, 199, 0.4)" />
         <Text style={styles.provenText}>
-          🏆 93% OF FAMILIES REPORT IMPROVED SLEEP PATTERNS
+          PROJECT CRADLE SECURED SESSION • V5.0 AAA+ QUALITY
         </Text>
       </View>
     </View>
@@ -90,135 +98,123 @@ const TierCard = ({
   tag,
   features,
   highlight,
+  popular,
+  accent,
   delay,
 }: any) => (
   <Animated.View
-    entering={FadeInRight.delay(delay).duration(800)}
+    entering={FadeInRight.delay(delay).duration(1000)}
     style={styles.cardWrapper}
   >
     <GlassCard
-      style={StyleSheet.flatten([
+      style={[
         styles.card,
         highlight && styles.highlightCard,
-      ])}
+        highlight && { borderColor: `${accent}33` },
+      ]}
     >
+      {popular && (
+        <View style={[styles.popularBadge, { backgroundColor: accent }]}>
+          <Text style={styles.popularText}>MOST POPULAR</Text>
+        </View>
+      )}
+
       <View style={styles.cardHeader}>
-        <View
-          style={StyleSheet.flatten([
-            styles.iconBox,
-            highlight && { backgroundColor: 'rgba(79, 209, 199, 0.1)' },
-          ])}
-        >
-          <Icon size={20} color={highlight ? '#4FD1C7' : '#94A3B8'} />
+        <View style={[styles.iconBox, { backgroundColor: `${accent}15` }]}>
+          <Icon size={22} color={accent} />
         </View>
         <View>
           <Text style={[styles.cardTitle, highlight && { color: '#FFF' }]}>
             {title}
           </Text>
-          <Text style={[styles.cardTag, highlight && { color: '#4FD1C7' }]}>
-            {tag}
-          </Text>
+          <Text style={[styles.cardTag, { color: accent }]}>{tag}</Text>
         </View>
       </View>
 
       <View style={styles.featureList}>
         {features.map((f: string, i: number) => (
           <View key={i} style={styles.featureRow}>
-            <Check size={12} color={highlight ? '#4FD1C7' : '#475569'} />
+            <Check size={14} color={accent} strokeWidth={3} />
             <Text
-              style={[styles.featureText, highlight && { color: '#E2E8F0' }]}
+              style={[styles.featureText, highlight && { color: '#CBD5E1' }]}
             >
               {f}
             </Text>
           </View>
         ))}
       </View>
-
-      {highlight && (
-        <View style={styles.popularBadge}>
-          <Text style={styles.popularText}>MOST POPULAR</Text>
-        </View>
-      )}
     </GlassCard>
   </Animated.View>
 );
 
 const styles = StyleSheet.create({
-  container: { width: '100%' },
+  container: { width: '100%', paddingBottom: 20 },
   hero: {
     color: '#FFF',
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: '900',
-    letterSpacing: -1.5,
+    letterSpacing: -2,
     marginBottom: 48,
+    lineHeight: 44,
   },
   desktopGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     justifyContent: 'space-between',
   },
   mobileStack: { gap: 16 },
   cardWrapper: { flex: 1 },
   card: {
     padding: 24,
-    borderRadius: 28,
-    minHeight: 260,
-    justifyContent: 'flex-start',
-  },
-  highlightCard: {
-    borderColor: 'rgba(79, 209, 199, 0.2)',
+    borderRadius: 32,
+    minHeight: 280,
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
+  highlightCard: { backgroundColor: 'rgba(255, 255, 255, 0.03)' },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     color: '#94A3B8',
     fontWeight: '900',
-    fontSize: 12,
-    letterSpacing: 1.2,
+    fontSize: 13,
+    letterSpacing: 1,
   },
   cardTag: {
-    color: '#475569',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
     marginTop: 2,
+    letterSpacing: 0.5,
   },
-  featureList: {
-    gap: 12,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
+  featureList: { gap: 14 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   featureText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 18,
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   popularBadge: {
     position: 'absolute',
-    top: -10,
-    right: 20,
-    backgroundColor: '#4FD1C7',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    top: -12,
+    right: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    zIndex: 10,
   },
   popularText: {
     color: '#020617',
@@ -227,16 +223,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   provenBadge: {
-    marginTop: 40,
-    paddingTop: 24,
+    marginTop: 60,
+    paddingTop: 32,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: 'rgba(255,255,255,0.03)',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   provenText: {
-    color: '#475569',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    color: 'rgba(71, 85, 105, 0.6)',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
 });
