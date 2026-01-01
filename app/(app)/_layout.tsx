@@ -370,7 +370,7 @@ const RoleBadge = ({ role }: { role: string }) => {
     ADMIN: {
       bg: 'rgba(79, 209, 199, 0.1)',
       text: '#4FD1C7',
-      label: 'SOVEREIGN ADMIN',
+      label: 'ADMIN',
     },
     SUPPORT: {
       bg: 'rgba(183, 148, 246, 0.1)',
